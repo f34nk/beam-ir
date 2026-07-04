@@ -1,0 +1,26 @@
+package io.beam.ir.erlang;
+
+public sealed interface Expression extends Node
+    permits AtomExpr,
+        IntegerExpr,
+        Variable,
+        CaseExpr,
+        BinaryExpr,
+        InfixExpr,
+        RemoteCallExpr,
+        LocalCallExpr,
+        ApplyExpr,
+        RecordExpr,
+        RecordFieldAccessExpr,
+        TupleExpr,
+        ListExpr,
+        ListComprehensionExpr,
+        Fun,
+        StringExpr,
+        MapExpr,
+        MatchExpr,
+        MacroExpr,
+        TryExpr,
+        BlockExpr,
+        MapEntriesExpr,
+        OpaqueExpr {}
