@@ -5,6 +5,23 @@ import java.util.List;
 public final class ErlangRenderer implements Renderer {
 
   private static final String INDENT = "    ";
+  private static final int PRINT_WIDTH = 100;
+
+  /** Render an expression/pattern into a scratch buffer and return its length. */
+  private int compactLength(java.util.function.Consumer<StringBuilder> renderFn) {
+    StringBuilder scratch = new StringBuilder();
+    renderFn.accept(scratch);
+    return scratch.length();
+  }
+
+  /** True when a single-line form would meet or exceed erlfmt's print width. */
+  private boolean exceedsPrintWidth(java.util.function.Consumer<StringBuilder> renderFn) {
+    return compactLength(renderFn) >= PRINT_WIDTH;
+  }
+
+  static int printWidthForTests() {
+    return PRINT_WIDTH;
+  }
 
   @Override
   public String render(Module module) {
