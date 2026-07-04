@@ -5,12 +5,15 @@ case runtime_http:dispatch(Config, Req) of
             {ok, Output} ->
                 NewAcc = (Acc ++ Output#list_widgets_output.widgets),
                 case Output#list_widgets_output.next_token of
-                    undefined -> {ok, NewAcc};
+                    undefined ->
+                        {ok, NewAcc};
                     NextToken ->
-                        NextInput = Input#list_widgets_input{ next_token = NextToken },
+                        NextInput = Input#list_widgets_input{next_token = NextToken},
                         list_widgets(Config, NextInput, NewAcc)
                 end;
-            {error, Reason} -> {error, Reason}
+            {error, Reason} ->
+                {error, Reason}
         end;
-    {error, Reason} -> {error, Reason}
+    {error, Reason} ->
+        {error, Reason}
 end.

@@ -3,7 +3,8 @@
 decode_get_user_request(#http_request{body = Body}) ->
     Decoded =
         case Body of
-            <<>> -> #{};
+            <<>> ->
+                #{};
             _ ->
                 case jsone:try_decode(Body) of
                     {ok, Val, _} -> Val;

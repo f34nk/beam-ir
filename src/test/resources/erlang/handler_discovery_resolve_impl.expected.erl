@@ -8,5 +8,6 @@ resolve_impl(Impl) ->
                 erlang:function_exported(Impl, Fun, 3)
             ]),
             {ok, Handlers};
-        {error, _} -> {error, {impl_not_loaded, Impl}}
+        {error, _} ->
+            {error, {impl_not_loaded, Impl}}
     end.
