@@ -28,6 +28,12 @@ public final class ErlangRenderer implements Renderer {
     return PRINT_WIDTH;
   }
 
+  String renderCallbackForTest(Callback callback) {
+    StringBuilder out = new StringBuilder();
+    render(callback, out);
+    return out.toString();
+  }
+
   @Override
   public String render(Module module) {
     if (module.verbatimOrNull() != null) {
@@ -255,6 +261,19 @@ public final class ErlangRenderer implements Renderer {
       }
       render(patterns.get(i), out);
     }
+  }
+
+  private void render(Callback callback, StringBuilder out) {
+    render(callback.docOrNull(), out);
+    String body = callback.name() + "(" + callback.inputTypes() + ") -> " + callback.outputTypes();
+    String line = "-callback " + body;
+    if (line.length() <= PRINT_WIDTH || body.indexOf(" -> ") < 0) {
+      out.append(line).append(".\n");
+      return;
+    }
+    int split = body.indexOf(" -> ");
+    out.append("-callback ").append(body, 0, split).append(" ->\n");
+    out.append(INDENT).append(body.substring(split + 4)).append(".\n");
   }
 
   private void render(FunctionDoc functionDoc, StringBuilder out) {

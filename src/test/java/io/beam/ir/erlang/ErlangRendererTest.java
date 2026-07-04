@@ -923,4 +923,43 @@ class ErlangRendererTest {
         """;
     assertEquals(expected, new ErlangRenderer().renderFunction(function));
   }
+
+  @Test
+  void rendersSingleLineCallback() {
+    Callback callback =
+        Callback.of(
+            "handle_basic",
+            "term(), basic_input(), term()",
+            "{ok, basic_output()} | {error, term()}");
+    assertEquals(
+        "-callback handle_basic(term(), basic_input(), term()) -> {ok, basic_output()} | {error, term()}.\n",
+        new ErlangRenderer().renderCallbackForTest(callback));
+  }
+
+  @Test
+  void rendersWrappedCallback() {
+    String longInput =
+        "a() | b() | c() | d() | e() | f() | g() | h() | i() | j() | k() | l() | m() | n()";
+    Callback callback = Callback.of("very_long_callback_name", longInput, "ok()");
+    assertEquals(
+        "-callback very_long_callback_name(" + longInput + ") ->\n    ok().\n",
+        new ErlangRenderer().renderCallbackForTest(callback));
+  }
+
+  @Test
+  void rendersCallbackWithEdoc() {
+    Callback callback =
+        Callback.of(
+            "handle_get_type_closure",
+            "Ctx :: term(), Input :: get_type_closure_input(), Meta :: term()",
+            "{ok, get_type_closure_output()} | {error, term()}",
+            Edoc.of("Handle GetTypeClosure operation."));
+    String expected =
+        """
+        %% @doc Handle GetTypeClosure operation.
+        -callback handle_get_type_closure(Ctx :: term(), Input :: get_type_closure_input(), Meta :: term()) ->
+            {ok, get_type_closure_output()} | {error, term()}.
+        """;
+    assertEquals(expected, new ErlangRenderer().renderCallbackForTest(callback));
+  }
 }
