@@ -201,17 +201,17 @@ public final class ErlangRenderer implements Renderer {
       return true;
     }
     return exceedsPrintWidth(
-        scratch -> {
-          scratch.append(name).append('(');
-          renderPatterns(clause.patterns(), scratch);
-          scratch.append(')');
-          if (clause.guard() != null) {
-            scratch.append(" when ");
-            render(clause.guard(), scratch);
-          }
-          scratch.append(" -> ");
-          render(clause.body(), scratch, "");
-        })
+            scratch -> {
+              scratch.append(name).append('(');
+              renderPatterns(clause.patterns(), scratch);
+              scratch.append(')');
+              if (clause.guard() != null) {
+                scratch.append(" when ");
+                render(clause.guard(), scratch);
+              }
+              scratch.append(" -> ");
+              render(clause.body(), scratch, "");
+            })
         || isWideCall(clause.body());
   }
 
@@ -881,8 +881,7 @@ public final class ErlangRenderer implements Renderer {
     }
   }
 
-  private void renderTupleWrapped(
-      List<Expression> elements, StringBuilder out, String indent) {
+  private void renderTupleWrapped(List<Expression> elements, StringBuilder out, String indent) {
     out.append('{');
     for (int i = 0; i < elements.size(); i++) {
       if (i > 0) {
@@ -1418,18 +1417,14 @@ public final class ErlangRenderer implements Renderer {
   private boolean shouldWrapBinaryPatternSegments(
       List<BinarySegmentPattern> segments, String linePrefix) {
     return binarySegmentsExceedPrintWidth(
-        segments.size(),
-        linePrefix,
-        (index, scratch) -> render(segments.get(index), scratch));
+        segments.size(), linePrefix, (index, scratch) -> render(segments.get(index), scratch));
   }
 
   private void renderBinaryPatternSegmentsMultiline(
       List<BinarySegmentPattern> segments, StringBuilder out, String linePrefix) {
     int breakIndex =
         findBinarySegmentBreakIndex(
-            segments.size(),
-            linePrefix,
-            (index, scratch) -> render(segments.get(index), scratch));
+            segments.size(), linePrefix, (index, scratch) -> render(segments.get(index), scratch));
     out.append("<<");
     for (int i = 0; i < breakIndex; i++) {
       if (i > 0) {

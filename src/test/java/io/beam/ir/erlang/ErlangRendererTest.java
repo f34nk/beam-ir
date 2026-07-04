@@ -265,7 +265,8 @@ class ErlangRendererTest {
 
   @Test
   void rendersFunctionWithMixedClauseWidths() {
-    String result = new ErlangRenderer().renderFunction(GoldenIrFixtures.mapDecodeColorLabelsFunction());
+    String result =
+        new ErlangRenderer().renderFunction(GoldenIrFixtures.mapDecodeColorLabelsFunction());
     String expected =
         """
         decode_color_labels(undefined) ->
