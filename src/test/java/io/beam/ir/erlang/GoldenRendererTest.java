@@ -43,7 +43,8 @@ class GoldenRendererTest {
 
   @Test
   void rendersRuntimeTypesHeader() throws IOException {
-    assertGolden("runtime_types.expected.hrl", renderer.render(GoldenIrFixtures.runtimeTypesHeader()));
+    assertGolden(
+        "runtime_types.expected.hrl", renderer.render(GoldenIrFixtures.runtimeTypesHeader()));
   }
 
   @Test
@@ -675,8 +676,7 @@ class GoldenRendererTest {
   @Test
   void rendersSigv4HelpersFunctions() throws IOException {
     assertGolden(
-        "sigv4_helpers.expected.erl",
-        renderFunctions(GoldenIrFixtures.sigv4HelpersFunctions()));
+        "sigv4_helpers.expected.erl", renderFunctions(GoldenIrFixtures.sigv4HelpersFunctions()));
   }
 
   @Test

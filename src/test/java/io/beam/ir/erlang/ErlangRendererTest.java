@@ -1031,7 +1031,9 @@ class ErlangRendererTest {
   @Test
   void rendersTypeAliasAppendsAritySuffix() {
     TypeAlias alias = TypeAlias.of("basic_item", "#basic_item{}");
-    assertEquals("-type basic_item() :: #basic_item{}.\n", new ErlangRenderer().renderTypeAliasForTest(alias));
+    assertEquals(
+        "-type basic_item() :: #basic_item{}.\n",
+        new ErlangRenderer().renderTypeAliasForTest(alias));
   }
 
   @Test
@@ -1073,8 +1075,7 @@ class ErlangRendererTest {
             "{basic_service_server, handlers}",
             List.of(
                 Function.of(
-                    "init_handlers",
-                    List.of(FunctionClause.of(List.of(), AtomExpr.of("ok"))))),
+                    "init_handlers", List.of(FunctionClause.of(List.of(), AtomExpr.of("ok"))))),
             List.of(
                 "Call basic_service_server:init_handlers/0 during application start before dispatch.",
                 "Default impl module: basic_service_impl."));

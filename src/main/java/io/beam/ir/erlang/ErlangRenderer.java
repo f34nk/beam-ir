@@ -170,7 +170,9 @@ public final class ErlangRenderer implements Renderer {
       TypeAlias type = typeEntry.typeAlias();
       String recordName = record.name();
       String typeName =
-          type.name().endsWith("()") ? type.name().substring(0, type.name().length() - 2) : type.name();
+          type.name().endsWith("()")
+              ? type.name().substring(0, type.name().length() - 2)
+              : type.name();
       return !recordName.equals(typeName);
     }
     return true;
@@ -239,7 +241,10 @@ public final class ErlangRenderer implements Renderer {
     }
     out.append("-type ").append(typeName).append(" ::\n");
     out.append(INDENT).append(typeAlias.definition(), 0, split).append('\n');
-    out.append(INDENT).append("| ").append(typeAlias.definition().substring(split + 3)).append(".\n");
+    out.append(INDENT)
+        .append("| ")
+        .append(typeAlias.definition().substring(split + 3))
+        .append(".\n");
   }
 
   @Override

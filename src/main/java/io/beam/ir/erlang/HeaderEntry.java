@@ -1,8 +1,7 @@
 package io.beam.ir.erlang;
 
 public sealed interface HeaderEntry
-    permits
-        HeaderComment,
+    permits HeaderComment,
         HeaderBlankLine,
         HeaderIfndef,
         HeaderDefine,

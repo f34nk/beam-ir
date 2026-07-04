@@ -18,20 +18,7 @@ public record Module(
     String verbatimOrNull) {
 
   public Module(String name, List<Function> functions) {
-    this(
-        name,
-        functions,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        false,
-        null,
-        null);
+    this(name, functions, null, null, null, null, null, null, null, null, false, null, null);
   }
 
   public static Module of(String name, List<Function> functions) {
@@ -108,10 +95,7 @@ public record Module(
   }
 
   public static Module behaviour(
-      String name,
-      List<String> headerComments,
-      String includeHeader,
-      List<Callback> callbacks) {
+      String name, List<String> headerComments, String includeHeader, List<Callback> callbacks) {
     return new Module(
         name,
         List.of(),
@@ -158,18 +142,6 @@ public record Module(
 
   public static Module verbatim(String content) {
     return new Module(
-        "",
-        List.of(),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        false,
-        null,
-        content);
+        "", List.of(), null, null, null, null, null, null, null, null, false, null, content);
   }
 }
