@@ -160,7 +160,9 @@ public final class ErlangRenderer implements Renderer {
     render(function.spec(), out);
 
     List<FunctionClause> clauses = function.clauses();
-    boolean multilineClauses = clauses.stream().anyMatch(this::usesMultilineClauseLayout);
+    boolean multilineClauses =
+        clauses.stream()
+            .anyMatch(clause -> usesMultilineFunctionClauseLayout(function.name(), clause));
     for (int i = 0; i < clauses.size(); i++) {
       FunctionClause clause = clauses.get(i);
       out.append(function.name()).append('(');
@@ -191,14 +193,33 @@ public final class ErlangRenderer implements Renderer {
     }
   }
 
-  private boolean usesMultilineClauseLayout(FunctionClause clause) {
+  private boolean usesMultilineFunctionClauseLayout(String name, FunctionClause clause) {
     if (!isSingleLineBody(clause.body())) {
       return true;
     }
     if (hasRecordPattern(clause.patterns())) {
       return true;
     }
-    return isWideCall(clause.body());
+    return exceedsPrintWidth(
+        scratch -> {
+          scratch.append(name).append('(');
+          renderPatterns(clause.patterns(), scratch);
+          scratch.append(')');
+          if (clause.guard() != null) {
+            scratch.append(" when ");
+            render(clause.guard(), scratch);
+          }
+          scratch.append(" -> ");
+          render(clause.body(), scratch, "");
+        })
+        || isWideCall(clause.body());
+  }
+
+  private boolean isWideCall(Expression body) {
+    if (body instanceof LocalCallExpr call) {
+      return call.arguments().size() >= 4;
+    }
+    return false;
   }
 
   private boolean hasRecordPattern(List<Pattern> patterns) {
@@ -206,13 +227,6 @@ public final class ErlangRenderer implements Renderer {
       if (pattern instanceof RecordPattern) {
         return true;
       }
-    }
-    return false;
-  }
-
-  private boolean isWideCall(Expression body) {
-    if (body instanceof LocalCallExpr call) {
-      return call.arguments().size() >= 4;
     }
     return false;
   }
@@ -599,6 +613,13 @@ public final class ErlangRenderer implements Renderer {
   private void renderCallArgumentWithOpeningBracket(
       Expression argument, StringBuilder out, String indent) {
     if (argument instanceof ListComprehensionExpr comprehension) {
+      if (listComprehensionFitsInlineInCall(comprehension, out)) {
+        out.append('[');
+        render(comprehension.expression(), out, indent);
+        renderListComprehensionQualifiers(comprehension.qualifiers(), out, indent, false);
+        out.append(']');
+        return;
+      }
       out.append('[').append('\n');
       out.append(indent).append(INDENT);
       render(comprehension.expression(), out, indent + INDENT);
@@ -610,6 +631,22 @@ public final class ErlangRenderer implements Renderer {
       return;
     }
     renderListHangAfterOpenParen((ListExpr) argument, out, indent);
+  }
+
+  private boolean listComprehensionFitsInlineInCall(
+      ListComprehensionExpr comprehension, StringBuilder out) {
+    if (usesMultilineListComprehensionLayout(comprehension)) {
+      return false;
+    }
+    String linePrefix = currentLinePrefix(out);
+    return !exceedsPrintWidthWithLinePrefix(
+        linePrefix,
+        scratch -> {
+          scratch.append('[');
+          render(comprehension.expression(), scratch, "");
+          renderListComprehensionQualifiers(comprehension.qualifiers(), scratch, "", false);
+          scratch.append(']');
+        });
   }
 
   private void renderListHangAfterOpenParen(ListExpr list, StringBuilder out, String indent) {
