@@ -869,8 +869,28 @@ public final class ErlangRenderer implements Renderer {
   }
 
   private void render(Fun fun, StringBuilder out, String indent) {
-    out.append("fun\n");
     List<FunClause> clauses = fun.clauses();
+    if (usesCompactFunLayout(clauses)) {
+      FunClause clause = clauses.get(0);
+      out.append("fun");
+      renderFunHead(clause, out);
+      out.append(" -> ");
+      render(clause.body(), out, indent);
+      out.append(" end");
+      return;
+    }
+
+    out.append("fun");
+    if (clauses.size() == 1 && clauses.get(0).patterns().isEmpty()) {
+      out.append("() ->\n");
+      out.append(indent).append(INDENT);
+      render(clauses.get(0).body(), out, indent + INDENT);
+      out.append('\n');
+      out.append(indent).append("end");
+      return;
+    }
+
+    out.append('\n');
     for (int i = 0; i < clauses.size(); i++) {
       out.append(indent).append(INDENT);
       renderFunClause(clauses.get(i), out);
@@ -880,6 +900,38 @@ public final class ErlangRenderer implements Renderer {
       out.append('\n');
     }
     out.append(indent).append("end");
+  }
+
+  private void renderFunHead(FunClause clause, StringBuilder out) {
+    if (clause.patterns().isEmpty()) {
+      out.append("()");
+      return;
+    }
+    out.append('(');
+    renderPatterns(clause.patterns(), out);
+    out.append(')');
+  }
+
+  private boolean usesCompactFunLayout(List<FunClause> clauses) {
+    if (clauses.size() != 1) {
+      return false;
+    }
+    FunClause clause = clauses.get(0);
+    if (clause.guard() != null) {
+      return false;
+    }
+    if (clause.patterns().isEmpty()) {
+      return false;
+    }
+    return isSingleLineBody(clause.body())
+        && !exceedsPrintWidth(
+            scratch -> {
+              scratch.append("fun");
+              renderFunHead(clause, scratch);
+              scratch.append(" -> ");
+              render(clause.body(), scratch, "");
+              scratch.append(" end");
+            });
   }
 
   private void renderFunClause(FunClause clause, StringBuilder out) {

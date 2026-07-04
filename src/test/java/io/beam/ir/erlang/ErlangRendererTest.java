@@ -17,15 +17,38 @@ class ErlangRendererTest {
   void rendersAtomPattern() {
     AtomPattern pattern = AtomPattern.of("foo");
     ErlangRenderer renderer = new ErlangRenderer();
-    StringBuilder out = new StringBuilder();
     String funWrap =
         renderer.renderExpression(Fun.of(List.of(FunClause.of(pattern, null, AtomExpr.of("bar")))));
-    // fun (foo) -> bar end
-    String expected = """
-        fun
-            (foo) -> bar
+    assertEquals("fun(foo) -> bar end", funWrap);
+  }
+
+  @Test
+  void rendersZeroArityFunWithBlockBody() {
+    Fun fun =
+        Fun.of(
+            List.of(
+                FunClause.of(
+                    List.of(),
+                    null,
+                    MatchExpr.bind(
+                        "Req",
+                        AtomExpr.of("ok"),
+                        CaseExpr.of(
+                            Variable.of("Req"),
+                            List.of(
+                                Clause.of(
+                                    TuplePattern.of(
+                                        List.of(AtomPattern.of("ok"), WildcardPattern.of())),
+                                    AtomExpr.of("done"))))))));
+    String expected =
+        """
+        fun() ->
+            Req = ok,
+            case Req of
+                {ok, _} -> done
+            end
         end""";
-    assertEquals(expected, funWrap);
+    assertEquals(expected, new ErlangRenderer().renderExpression(fun));
   }
 
   @Test
