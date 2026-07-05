@@ -78,6 +78,32 @@ class ErlangRendererTest {
   }
 
   @Test
+  void rendersBinaryExprWrappedInTupleWithoutDuplicatingPrefix() {
+    BinaryExpr schemePrefix =
+        BinaryExpr.of(
+            List.of(
+                BinarySegmentExpr.of(
+                    LocalCallExpr.of("list_to_binary", List.of(Variable.of("Scheme"))), "binary"),
+                BinarySegmentExpr.literal("://")));
+    BinaryExpr authority =
+        BinaryExpr.of(
+            List.of(
+                BinarySegmentExpr.of(
+                    LocalCallExpr.of("list_to_binary", List.of(Variable.of("Host"))), "binary"),
+                BinarySegmentExpr.of(Variable.of("PortSuffix"), "binary")));
+    TupleExpr tuple = TupleExpr.of(List.of(schemePrefix, authority));
+
+    String rendered = new DefaultErlangRenderer().renderExpressionForTest(tuple, "            ");
+
+    assertTrue(rendered.contains("(list_to_binary(Host))"));
+    assertTrue(rendered.contains("PortSuffix/binary"));
+    assertFalse(
+        rendered.contains(
+            "{<<(list_to_binary(Scheme))/binary, \"://\">>,     PortSuffix/binary>>"));
+    assertEquals(1, rendered.split("\\(list_to_binary\\(Scheme\\)\\)", -1).length - 1);
+  }
+
+  @Test
   void rendersBinaryExprWithParenthesizedSegment() {
     BinaryExpr binaryExpr =
         BinaryExpr.of(

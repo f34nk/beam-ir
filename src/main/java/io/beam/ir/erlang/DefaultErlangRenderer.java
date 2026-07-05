@@ -34,6 +34,15 @@ final class DefaultErlangRenderer implements Renderer {
     return out.toString();
   }
 
+  String renderExpressionForTest(Expression expression, String indent) {
+    StringBuilder out = new StringBuilder();
+    if (!indent.isEmpty()) {
+      out.append(indent);
+    }
+    render(expression, out, indent);
+    return out.toString();
+  }
+
   String renderTypeAliasForTest(TypeAlias typeAlias) {
     StringBuilder out = new StringBuilder();
     render(typeAlias, out);
@@ -1121,6 +1130,14 @@ final class DefaultErlangRenderer implements Renderer {
     return lastNewline < 0 ? text : text.substring(lastNewline + 1);
   }
 
+  private static String leadingWhitespace(String text) {
+    int end = 0;
+    while (end < text.length() && text.charAt(end) == ' ') {
+      end++;
+    }
+    return text.substring(0, end);
+  }
+
   private void render(MapExpr map, StringBuilder out, String indent) {
     if (map.base() != null) {
       render(map.base(), out, indent);
@@ -1596,7 +1613,7 @@ final class DefaultErlangRenderer implements Renderer {
       render(segments.get(i), out, indent);
     }
     out.append(",\n");
-    out.append(linePrefix).append(INDENT);
+    out.append(indent).append(INDENT);
     for (int i = breakIndex; i < segments.size(); i++) {
       if (i > breakIndex) {
         out.append(", ");
@@ -1625,7 +1642,7 @@ final class DefaultErlangRenderer implements Renderer {
       render(segments.get(i), out);
     }
     out.append(",\n");
-    out.append(linePrefix).append(INDENT);
+    out.append(leadingWhitespace(linePrefix)).append(INDENT);
     for (int i = breakIndex; i < segments.size(); i++) {
       if (i > breakIndex) {
         out.append(", ");
