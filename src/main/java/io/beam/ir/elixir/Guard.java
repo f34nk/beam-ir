@@ -5,5 +5,4 @@ public sealed interface Guard
         ComparisonGuard,
         AndGuard,
         OrGuard,
-        FunctionArityGuard,
-        OpaqueGuard {}
+        FunctionArityGuard {}

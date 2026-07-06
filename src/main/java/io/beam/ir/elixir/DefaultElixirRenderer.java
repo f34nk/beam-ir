@@ -61,8 +61,6 @@ final class DefaultElixirRenderer implements Renderer {
           .append(", ")
           .append(fnGuard.arity())
           .append(')');
-    } else if (guard instanceof OpaqueGuard opaqueGuard) {
-      out.append(opaqueGuard.text());
     } else {
       throw new IllegalArgumentException("Unsupported guard: " + guard);
     }
@@ -795,8 +793,6 @@ final class DefaultElixirRenderer implements Renderer {
       render(concat.left(), out);
       out.append(" <> ");
       render(concat.right(), out);
-    } else if (pattern instanceof OpaquePattern opaque) {
-      out.append(opaque.text());
     } else {
       throw new IllegalArgumentException("Unsupported pattern: " + pattern);
     }
