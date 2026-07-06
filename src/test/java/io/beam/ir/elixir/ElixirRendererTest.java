@@ -126,4 +126,51 @@ class ElixirRendererTest {
         "&encode_event_stream_event/1",
         ElixirRenderer.renderExpression(CaptureExpr.of("encode_event_stream_event", 1)));
   }
+
+  @Test
+  void rendersInfixExpr() {
+    assertEquals(
+        "\"/names/\" <> uri_encode(name)",
+        ElixirRenderer.renderExpression(
+            new InfixExpr(
+                StringExpr.of("/names/"),
+                "<>",
+                LocalCallExpr.of("uri_encode", List.of(Variable.of("name"))),
+                null)));
+  }
+
+  @Test
+  void rendersPipeExpr() {
+    assertEquals(
+        "body |> AwsEventStream.decode_frames()",
+        ElixirRenderer.renderExpression(
+            new PipeExpr(
+                Variable.of("body"),
+                List.of(
+                    new PipeStep(
+                        RemoteCallExpr.of("AwsEventStream", "decode_frames", List.of()),
+                        List.of(),
+                        null)),
+                null)));
+  }
+
+  @Test
+  void rendersMatchExpr() {
+    assertEquals(
+        "path = \"/names/\"",
+        ElixirRenderer.renderExpression(MatchExpr.bind("path", StringExpr.of("/names/"))));
+  }
+
+  @Test
+  void rendersInterpolatedStringExpr() {
+    assertEquals(
+        "\"#{part_a}-#{part_b}\"",
+        ElixirRenderer.renderExpression(
+            new InterpolatedStringExpr(
+                List.of(
+                    new InterpolatedExpr(Variable.of("part_a")),
+                    new InterpolatedLiteral("-"),
+                    new InterpolatedExpr(Variable.of("part_b"))),
+                null)));
+  }
 }

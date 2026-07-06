@@ -57,6 +57,14 @@ final class DefaultElixirRenderer implements Renderer {
       render(call, out, indent);
     } else if (expression instanceof CaptureExpr capture) {
       out.append('&').append(capture.function()).append('/').append(capture.arity());
+    } else if (expression instanceof InfixExpr infix) {
+      render(infix, out, indent);
+    } else if (expression instanceof PipeExpr pipe) {
+      render(pipe, out, indent);
+    } else if (expression instanceof MatchExpr match) {
+      render(match, out, indent);
+    } else if (expression instanceof InterpolatedStringExpr string) {
+      render(string, out, indent);
     } else {
       throw new IllegalArgumentException("Unsupported expression: " + expression);
     }
@@ -174,6 +182,85 @@ final class DefaultElixirRenderer implements Renderer {
           renderMapEntries(map.entries(), scratch, "");
           scratch.append('}');
         });
+  }
+
+  private void render(InfixExpr infix, StringBuilder out, String indent) {
+    if (!infixExceedsPrintWidth(infix)) {
+      render(infix.left(), out, indent);
+      out.append(' ').append(infix.op()).append(' ');
+      render(infix.right(), out, indent);
+      return;
+    }
+    render(infix.left(), out, indent);
+    out.append("\n").append(indent).append(infix.op()).append(' ');
+    render(infix.right(), out, indent + INDENT);
+  }
+
+  private boolean infixExceedsPrintWidth(InfixExpr infix) {
+    return exceedsPrintWidth(
+        scratch -> {
+          render(infix.left(), scratch, "");
+          scratch.append(' ').append(infix.op()).append(' ');
+          render(infix.right(), scratch, "");
+        });
+  }
+
+  private void render(PipeExpr pipe, StringBuilder out, String indent) {
+    if (!pipeExceedsPrintWidth(pipe)) {
+      render(pipe.initial(), out, indent);
+      for (PipeStep step : pipe.steps()) {
+        out.append(" |> ");
+        renderPipeStep(step, out, indent);
+      }
+      return;
+    }
+    render(pipe.initial(), out, indent);
+    for (PipeStep step : pipe.steps()) {
+      out.append("\n|> ");
+      renderPipeStep(step, out, indent);
+    }
+  }
+
+  private void renderPipeStep(PipeStep step, StringBuilder out, String indent) {
+    render(step.callable(), out, indent);
+    for (Expression arg : step.extraArgs()) {
+      out.append(", ");
+      render(arg, out, indent);
+    }
+  }
+
+  private boolean pipeExceedsPrintWidth(PipeExpr pipe) {
+    return exceedsPrintWidth(
+        scratch -> {
+          render(pipe.initial(), scratch, "");
+          for (PipeStep step : pipe.steps()) {
+            scratch.append(" |> ");
+            renderPipeStep(step, scratch, "");
+          }
+        });
+  }
+
+  private void render(MatchExpr match, StringBuilder out, String indent) {
+    out.append(match.name()).append(" = ");
+    render(match.value(), out, indent);
+    if (match.bodyOrNull() != null) {
+      out.append('\n').append(indent);
+      render(match.bodyOrNull(), out, indent);
+    }
+  }
+
+  private void render(InterpolatedStringExpr string, StringBuilder out, String indent) {
+    out.append('"');
+    for (InterpolatedSegment segment : string.segments()) {
+      if (segment instanceof InterpolatedLiteral literal) {
+        out.append(escapeString(literal.text()));
+      } else if (segment instanceof InterpolatedExpr expr) {
+        out.append("#{");
+        render(expr.expression(), out, indent);
+        out.append('}');
+      }
+    }
+    out.append('"');
   }
 
   private void render(RemoteCallExpr call, StringBuilder out, String indent) {

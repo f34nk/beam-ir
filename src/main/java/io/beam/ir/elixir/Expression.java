@@ -15,4 +15,8 @@ public sealed interface Expression extends Node
         RemoteCallExpr,
         LocalCallExpr,
         DotCallExpr,
-        CaptureExpr {}
+        CaptureExpr,
+        InfixExpr,
+        PipeExpr,
+        MatchExpr,
+        InterpolatedStringExpr {}
