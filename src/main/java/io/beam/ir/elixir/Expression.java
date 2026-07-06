@@ -1,3 +1,10 @@
 package io.beam.ir.elixir;
 
-public interface Expression extends Node {}
+public sealed interface Expression extends Node
+    permits AtomExpr,
+        IntegerExpr,
+        Variable,
+        StringExpr,
+        NilExpr,
+        BooleanExpr,
+        OpaqueExpr {}

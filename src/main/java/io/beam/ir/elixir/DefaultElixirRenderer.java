@@ -24,6 +24,37 @@ final class DefaultElixirRenderer implements Renderer {
     return PRINT_WIDTH;
   }
 
+  private void render(Expression expression, StringBuilder out, String indent) {
+    if (expression instanceof AtomExpr atom) {
+      out.append(':').append(atom.value());
+    } else if (expression instanceof IntegerExpr integer) {
+      out.append(integer.value());
+    } else if (expression instanceof Variable variable) {
+      out.append(variable.name());
+    } else if (expression instanceof StringExpr string) {
+      out.append('"').append(escapeString(string.value())).append('"');
+    } else if (expression instanceof NilExpr) {
+      out.append("nil");
+    } else if (expression instanceof BooleanExpr bool) {
+      out.append(bool.value());
+    } else if (expression instanceof OpaqueExpr opaque) {
+      out.append(opaque.text());
+    } else {
+      throw new IllegalArgumentException("Unsupported expression: " + expression);
+    }
+  }
+
+  private static String escapeString(String value) {
+    return value.replace("\\", "\\\\").replace("\"", "\\\"");
+  }
+
+  @Override
+  public String renderExpression(Expression expression) {
+    StringBuilder out = new StringBuilder();
+    render(expression, out, "");
+    return out.toString();
+  }
+
   @Override
   public String render(Module module) {
     throw new UnsupportedOperationException("Module rendering not implemented");
@@ -37,11 +68,6 @@ final class DefaultElixirRenderer implements Renderer {
   @Override
   public String renderFunction(Function function) {
     throw new UnsupportedOperationException("Function rendering not implemented");
-  }
-
-  @Override
-  public String renderExpression(Expression expression) {
-    throw new UnsupportedOperationException("Expression rendering not implemented");
   }
 
   @Override
