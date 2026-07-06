@@ -4,4 +4,9 @@ import java.util.List;
 
 public record StructPattern(
     String moduleNameOrNull, List<StructPatternField> fields, SourceSpan source)
-    implements Pattern {}
+    implements Pattern {
+
+  public static StructPattern of(String moduleName, List<StructPatternField> fields) {
+    return new StructPattern(moduleName, fields, null);
+  }
+}
