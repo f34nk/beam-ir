@@ -365,7 +365,8 @@ final class DefaultElixirRenderer implements Renderer {
     render(caseExpr, out, indent, false);
   }
 
-  private void render(CaseExpr caseExpr, StringBuilder out, String indent, boolean forceMultilineClauses) {
+  private void render(
+      CaseExpr caseExpr, StringBuilder out, String indent, boolean forceMultilineClauses) {
     out.append("case");
     if (caseExpr.subjectOrNull() != null) {
       out.append(' ');
@@ -391,7 +392,9 @@ final class DefaultElixirRenderer implements Renderer {
       }
       out.append(" ->");
       Expression body = clauses.get(i).body();
-      if (multilineCase || usesMultilineCaseBody(body) || clauseUsesExpandedFormat(clauses.get(i))) {
+      if (multilineCase
+          || usesMultilineCaseBody(body)
+          || clauseUsesExpandedFormat(clauses.get(i))) {
         out.append('\n');
         out.append(indent).append(INDENT).append(INDENT);
         render(body, out, indent + INDENT + INDENT);
@@ -450,7 +453,8 @@ final class DefaultElixirRenderer implements Renderer {
   }
 
   private boolean callHasVerticalListArg(List<Expression> args) {
-    return args.stream().anyMatch(arg -> arg instanceof ListExpr list && shouldUseVerticalList(list));
+    return args.stream()
+        .anyMatch(arg -> arg instanceof ListExpr list && shouldUseVerticalList(list));
   }
 
   private void render(IfExpr ifExpr, StringBuilder out, String indent) {
@@ -550,8 +554,7 @@ final class DefaultElixirRenderer implements Renderer {
       return tuple.elements().stream().noneMatch(this::expressionNeedsExpandedAnonFunBody)
           && !exceedsPrintWidth(scratch -> render(body, scratch, ""));
     }
-    return !usesMultilineCaseBody(body)
-        && !exceedsPrintWidth(scratch -> render(body, scratch, ""));
+    return !usesMultilineCaseBody(body) && !exceedsPrintWidth(scratch -> render(body, scratch, ""));
   }
 
   private boolean expressionNeedsExpandedAnonFunBody(Expression expression) {
@@ -667,7 +670,8 @@ final class DefaultElixirRenderer implements Renderer {
   }
 
   private void render(RemoteCallExpr call, StringBuilder out, String indent) {
-    if (renderCallWithTrailingAnonFun(call.module() + "." + call.function(), call.args(), out, indent)) {
+    if (renderCallWithTrailingAnonFun(
+        call.module() + "." + call.function(), call.args(), out, indent)) {
       return;
     }
     if (call.args().size() == 1 && call.args().get(0) instanceof AnonFun fun) {
@@ -706,9 +710,7 @@ final class DefaultElixirRenderer implements Renderer {
 
   private boolean renderCallWithTrailingAnonFun(
       String name, List<Expression> args, StringBuilder out, String indent) {
-    if (args.size() == 2
-        && args.get(0) instanceof Variable
-        && args.get(1) instanceof AnonFun fun) {
+    if (args.size() == 2 && args.get(0) instanceof Variable && args.get(1) instanceof AnonFun fun) {
       out.append(name).append('(');
       render(args.get(0), out, indent);
       out.append(", ");

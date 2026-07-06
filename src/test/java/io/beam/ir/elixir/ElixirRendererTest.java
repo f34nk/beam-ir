@@ -321,9 +321,7 @@ class ElixirRendererTest {
                         dotCall(
                             Variable.of("handler"),
                             List.of(
-                                Variable.of("ctx"),
-                                Variable.of("input"),
-                                Variable.of("meta")))),
+                                Variable.of("ctx"), Variable.of("input"), Variable.of("meta")))),
                     Clause.of(
                         WildcardPattern.of(),
                         TupleExpr.of(
