@@ -7,17 +7,14 @@ public record Module(
     Moduledoc moduledocOrNull,
     List<UseDirective> uses,
     List<Alias> aliases,
-    List<Function> functions,
     List<String> moduleAttributes,
-    String verbatimOrNull)
+    List<TypesModule> nestedTypesModules,
+    List<String> trailingModuleAttributes,
+    List<Function> functions)
     implements Node {
 
   public static Module of(String name, List<Function> functions) {
-    return new Module(name, null, List.of(), List.of(), functions, List.of(), null);
-  }
-
-  public static Module verbatim(String content) {
-    return new Module("", null, List.of(), List.of(), List.of(), List.of(), content);
+    return new Module(name, null, List.of(), List.of(), List.of(), List.of(), List.of(), functions);
   }
 
   @Override

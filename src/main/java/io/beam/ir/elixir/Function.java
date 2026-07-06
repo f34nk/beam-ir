@@ -10,8 +10,7 @@ public record Function(
     Spec specOrNull,
     FunctionDoc docOrNull,
     boolean oneLiner,
-    SourceSpan source,
-    String verbatimOrNull)
+    SourceSpan source)
     implements Node {
 
   @Override
