@@ -55,6 +55,12 @@ final class DefaultElixirRenderer implements Renderer {
         }
         render(guards.get(i), out);
       }
+    } else if (guard instanceof FunctionArityGuard fnGuard) {
+      out.append("is_function(")
+          .append(fnGuard.variable())
+          .append(", ")
+          .append(fnGuard.arity())
+          .append(')');
     } else if (guard instanceof OpaqueGuard opaqueGuard) {
       out.append(opaqueGuard.text());
     } else {
@@ -336,6 +342,10 @@ final class DefaultElixirRenderer implements Renderer {
       }
       out.append(indent).append(INDENT);
       render(clauses.get(i).pattern(), out);
+      if (clauses.get(i).guardOrNull() != null) {
+        out.append(" when ");
+        render(clauses.get(i).guardOrNull(), out);
+      }
       out.append(" ->");
       Expression body = clauses.get(i).body();
       if (multilineCase || usesMultilineCaseBody(body)) {
@@ -761,6 +771,29 @@ final class DefaultElixirRenderer implements Renderer {
     } else if (pattern instanceof AssignPattern assign) {
       out.append(assign.name()).append(" = ");
       render(assign.pattern(), out);
+    } else if (pattern instanceof IntegerPattern integer) {
+      out.append(integer.value());
+    } else if (pattern instanceof BinaryPattern binary) {
+      out.append("<<");
+      for (int i = 0; i < binary.segments().size(); i++) {
+        if (i > 0) {
+          out.append(", ");
+        }
+        BinarySegmentPattern seg = binary.segments().get(i);
+        if (seg.literalOrNull() != null) {
+          out.append('"').append(escapeString(seg.literalOrNull())).append('"');
+        } else {
+          render(seg.patternOrNull(), out);
+        }
+        if (seg.typeOrNull() != null) {
+          out.append("::").append(seg.typeOrNull());
+        }
+      }
+      out.append(">>");
+    } else if (pattern instanceof ConcatPattern concat) {
+      render(concat.left(), out);
+      out.append(" <> ");
+      render(concat.right(), out);
     } else if (pattern instanceof OpaquePattern opaque) {
       out.append(opaque.text());
     } else {

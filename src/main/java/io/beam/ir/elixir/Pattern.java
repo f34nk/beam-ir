@@ -13,4 +13,7 @@ public sealed interface Pattern extends Node
         NilPattern,
         ConsListPattern,
         AssignPattern,
+        IntegerPattern,
+        BinaryPattern,
+        ConcatPattern,
         OpaquePattern {}

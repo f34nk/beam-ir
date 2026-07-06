@@ -252,9 +252,44 @@ class ElixirRendererTest {
   }
 
   @Test
+  void rendersIntegerPattern() {
+    assertEquals("42", ElixirRenderer.renderPattern(IntegerPattern.of(42)));
+  }
+
+  @Test
+  void rendersBinaryPattern() {
+    assertEquals("<<>>", ElixirRenderer.renderPattern(BinaryPattern.of(List.of())));
+    assertEquals(
+        "<<\"true\">>",
+        ElixirRenderer.renderPattern(
+            BinaryPattern.of(List.of(BinarySegmentPattern.literal("true")))));
+  }
+
+  @Test
+  void rendersBinaryPatternWithSegments() {
+    BinaryPattern pattern =
+        BinaryPattern.of(
+            List.of(
+                BinarySegmentPattern.literal("{"),
+                BinarySegmentPattern.of(VariablePattern.of("rest"), "binary")));
+    assertEquals("<<\"{\", rest::binary>>", ElixirRenderer.renderPattern(pattern));
+  }
+
+  @Test
+  void rendersConcatPattern() {
+    assertEquals(
+        "\"[\" <> _",
+        ElixirRenderer.renderPattern(
+            ConcatPattern.of(StringPattern.of("["), WildcardPattern.of())));
+  }
+
+  @Test
   void rendersGuards() {
     DefaultElixirRenderer renderer = new DefaultElixirRenderer();
     assertEquals("is_map(map)", renderer.renderGuardForTest(IsTypeGuard.of("is_map", "map")));
+    assertEquals(
+        "is_function(handler, 3)",
+        renderer.renderGuardForTest(FunctionArityGuard.of("handler", 3)));
     assertEquals(
         "is_binary(id) and is_binary(secret)",
         renderer.renderGuardForTest(
@@ -265,6 +300,35 @@ class ElixirRendererTest {
         "map == %{}",
         renderer.renderGuardForTest(
             new ComparisonGuard(Variable.of("map"), "==", MapExpr.of(List.of()), null)));
+  }
+
+  @Test
+  void rendersCaseExprWithGuard() {
+    assertEquals(
+        """
+        case Map.get(handlers, fun) do
+          handler when is_function(handler, 3) -> handler.(ctx, input, meta)
+          _ -> {:error, :not_implemented}
+        end""",
+        ElixirRenderer.renderExpression(
+            new CaseExpr(
+                RemoteCallExpr.of(
+                    "Map", "get", List.of(Variable.of("handlers"), Variable.of("fun"))),
+                List.of(
+                    Clause.of(
+                        VariablePattern.of("handler"),
+                        FunctionArityGuard.of("handler", 3),
+                        dotCall(
+                            Variable.of("handler"),
+                            List.of(
+                                Variable.of("ctx"),
+                                Variable.of("input"),
+                                Variable.of("meta")))),
+                    Clause.of(
+                        WildcardPattern.of(),
+                        TupleExpr.of(
+                            List.of(AtomExpr.of("error"), AtomExpr.of("not_implemented"))))),
+                null)));
   }
 
   @Test
