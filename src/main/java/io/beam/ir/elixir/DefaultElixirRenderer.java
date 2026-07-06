@@ -49,6 +49,14 @@ final class DefaultElixirRenderer implements Renderer {
       render(map, out, indent);
     } else if (expression instanceof StructExpr struct) {
       render(struct, out, indent);
+    } else if (expression instanceof RemoteCallExpr call) {
+      render(call, out, indent);
+    } else if (expression instanceof LocalCallExpr call) {
+      render(call, out, indent);
+    } else if (expression instanceof DotCallExpr call) {
+      render(call, out, indent);
+    } else if (expression instanceof CaptureExpr capture) {
+      out.append('&').append(capture.function()).append('/').append(capture.arity());
     } else {
       throw new IllegalArgumentException("Unsupported expression: " + expression);
     }
@@ -165,6 +173,95 @@ final class DefaultElixirRenderer implements Renderer {
           scratch.append('{');
           renderMapEntries(map.entries(), scratch, "");
           scratch.append('}');
+        });
+  }
+
+  private void render(RemoteCallExpr call, StringBuilder out, String indent) {
+    if (!callExceedsPrintWidth(call.module(), call.function(), call.args(), null)) {
+      out.append(call.module()).append('.').append(call.function()).append('(');
+      renderCommaSeparated(call.args(), out, indent);
+      out.append(')');
+      return;
+    }
+    renderCallVertical(call.module() + "." + call.function(), call.args(), out, indent, null);
+  }
+
+  private void render(LocalCallExpr call, StringBuilder out, String indent) {
+    if (!callExceedsPrintWidth(null, call.function(), call.args(), null)) {
+      out.append(call.function()).append('(');
+      renderCommaSeparated(call.args(), out, indent);
+      out.append(')');
+      return;
+    }
+    renderCallVertical(call.function(), call.args(), out, indent, null);
+  }
+
+  private void render(DotCallExpr call, StringBuilder out, String indent) {
+    String qualified = call.function();
+    int dot = qualified.lastIndexOf('.');
+    String target = dot >= 0 ? qualified : qualified;
+    List<Expression> allArgs = prependReceiver(call.receiver(), call.args());
+    if (!callExceedsPrintWidth(
+        dot >= 0 ? qualified.substring(0, dot) : null,
+        dot >= 0 ? qualified.substring(dot + 1) : qualified,
+        allArgs,
+        call.receiver())) {
+      if (dot >= 0) {
+        out.append(qualified, 0, dot).append('.').append(qualified.substring(dot + 1));
+      } else {
+        out.append(qualified);
+      }
+      out.append('(');
+      render(call.receiver(), out, indent);
+      for (Expression arg : call.args()) {
+        out.append(", ");
+        render(arg, out, indent);
+      }
+      out.append(')');
+      return;
+    }
+    renderCallVertical(target, allArgs, out, indent, call.receiver());
+  }
+
+  private List<Expression> prependReceiver(Expression receiver, List<Expression> args) {
+    java.util.ArrayList<Expression> all = new java.util.ArrayList<>(args.size() + 1);
+    all.add(receiver);
+    all.addAll(args);
+    return all;
+  }
+
+  private void renderCallVertical(
+      String name, List<Expression> args, StringBuilder out, String indent, Expression firstArg) {
+    out.append(name).append("(\n");
+    String argIndent = indent + INDENT;
+    for (int i = 0; i < args.size(); i++) {
+      if (i > 0) {
+        out.append(",\n");
+      }
+      out.append(argIndent);
+      render(args.get(i), out, argIndent);
+    }
+    out.append('\n').append(indent).append(')');
+  }
+
+  private boolean callExceedsPrintWidth(
+      String module, String function, List<Expression> args, Expression receiverOrNull) {
+    return exceedsPrintWidth(
+        scratch -> {
+          if (module != null) {
+            scratch.append(module).append('.');
+          }
+          scratch.append(function).append('(');
+          if (receiverOrNull != null) {
+            render(receiverOrNull, scratch, "");
+            for (Expression arg : args) {
+              scratch.append(", ");
+              render(arg, scratch, "");
+            }
+          } else {
+            renderCommaSeparated(args, scratch, "");
+          }
+          scratch.append(')');
         });
   }
 

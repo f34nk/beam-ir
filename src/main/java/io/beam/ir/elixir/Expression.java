@@ -11,4 +11,8 @@ public sealed interface Expression extends Node
         TupleExpr,
         ListExpr,
         MapExpr,
-        StructExpr {}
+        StructExpr,
+        RemoteCallExpr,
+        LocalCallExpr,
+        DotCallExpr,
+        CaptureExpr {}

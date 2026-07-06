@@ -100,4 +100,30 @@ class ElixirRendererTest {
                     new StructPatternField("headers", VariablePattern.of("headers"), null)),
                 null)));
   }
+
+  @Test
+  void rendersRemoteCallExpr() {
+    assertEquals(
+        "Map.fetch!(config, :credentials)",
+        ElixirRenderer.renderExpression(
+            RemoteCallExpr.of(
+                "Map",
+                "fetch!",
+                List.of(Variable.of("config"), AtomExpr.of("credentials")))));
+  }
+
+  @Test
+  void rendersLocalCallExpr() {
+    assertEquals(
+        "inspect(value)",
+        ElixirRenderer.renderExpression(
+            LocalCallExpr.of("inspect", List.of(Variable.of("value")))));
+  }
+
+  @Test
+  void rendersCaptureExpr() {
+    assertEquals(
+        "&encode_event_stream_event/1",
+        ElixirRenderer.renderExpression(CaptureExpr.of("encode_event_stream_event", 1)));
+  }
 }
