@@ -9,4 +9,8 @@ public sealed interface Pattern extends Node
         StringPattern,
         StructPattern,
         PinPattern,
-        MapPattern {}
+        MapPattern,
+        NilPattern,
+        ConsListPattern,
+        AssignPattern,
+        OpaquePattern {}
