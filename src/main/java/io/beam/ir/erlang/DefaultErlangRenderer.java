@@ -75,21 +75,21 @@ final class DefaultErlangRenderer implements Renderer {
       }
     }
 
+    if (module.includeHeaders() != null) {
+      for (String includeHeader : module.includeHeaders()) {
+        out.append("-include(\"").append(includeHeader).append("\").\n");
+      }
+    }
+
     if (!module.suppressExport()) {
-      out.append("-export([");
+      out.append("-export([\n");
       if (module.exports() != null && !module.exports().isEmpty()) {
         renderNamedExports(module.exports(), out);
       } else {
         renderExports(module.functions(), out);
       }
       out.append("]).\n");
-    }
-
-    if (module.includeHeaders() != null) {
-      for (String includeHeader : module.includeHeaders()) {
-        out.append("-include(\"").append(includeHeader).append("\").\n");
-      }
-    } else if (!module.suppressExport()) {
+    } else if (module.includeHeaders() == null) {
       out.append('\n');
     }
 
@@ -284,20 +284,22 @@ final class DefaultErlangRenderer implements Renderer {
 
   private void renderExports(List<Function> functions, StringBuilder out) {
     for (int i = 0; i < functions.size(); i++) {
-      if (i > 0) {
-        out.append(", ");
-      }
       Function function = functions.get(i);
-      out.append(function.name()).append('/').append(function.arity());
+      out.append("    ").append(function.name()).append('/').append(function.arity());
+      if (i < functions.size() - 1) {
+        out.append(',');
+      }
+      out.append('\n');
     }
   }
 
   private void renderNamedExports(List<String> exports, StringBuilder out) {
     for (int i = 0; i < exports.size(); i++) {
-      if (i > 0) {
-        out.append(", ");
+      out.append("    ").append(exports.get(i));
+      if (i < exports.size() - 1) {
+        out.append(',');
       }
-      out.append(exports.get(i));
+      out.append('\n');
     }
   }
 

@@ -182,17 +182,15 @@ class ErlangRendererTest {
 
   @Test
   void rendersCaseWithBrokenScrutinee() {
-    Expression expression = GoldenIrFixturesExpressions.httpChecksumResponseGuardExpression();
+    Expression expression = GoldenRendererTest.syntaxCaseExpression();
     String expected =
         """
-        case
-            validate_response_checksum(Body, Headers, [
-                <<"x-amz-checksum-crc32c">>,
-                <<"x-amz-checksum-sha256">>
-            ])
-        of
+        case validate_checksum(Body, Headers, [
+            <<"x-checksum-a">>,
+            <<"x-checksum-b">>
+        ]) of
             ok -> {ok, Output};
-            {error, Reason} -> {error, {checksum_validation_failed, Reason}}
+            {error, Reason} -> {error, {checksum_failed, Reason}}
         end""";
     assertEquals(expected, ErlangRenderer.renderExpression(expression));
   }
@@ -293,7 +291,29 @@ class ErlangRendererTest {
 
   @Test
   void rendersFunctionWithMixedClauseWidths() {
-    String result = ErlangRenderer.renderFunction(GoldenIrFixtures.mapDecodeColorLabelsFunction());
+    Function function =
+        Function.of(
+            "decode_color_labels",
+            List.of(
+                FunctionClause.of(List.of(AtomPattern.of("undefined")), AtomExpr.of("undefined")),
+                FunctionClause.of(List.of(AtomPattern.of("null")), AtomExpr.of("undefined")),
+                FunctionClause.of(
+                    List.of(VariablePattern.of("Map")),
+                    IsTypeGuard.of("map", Variable.of("Map")),
+                    RemoteCallExpr.of(
+                        "maps",
+                        "from_list",
+                        List.of(
+                            ListComprehensionExpr.of(
+                                TupleExpr.of(
+                                    List.of(
+                                        LocalCallExpr.of("decode_color", List.of(Variable.of("K"))),
+                                        Variable.of("V"))),
+                                TuplePattern.of(
+                                    List.of(VariablePattern.of("K"), VariablePattern.of("V"))),
+                                RemoteCallExpr.of(
+                                    "maps", "to_list", List.of(Variable.of("Map")))))))));
+    String result = ErlangRenderer.renderFunction(function);
     String expected =
         """
         decode_color_labels(undefined) ->
@@ -732,8 +752,10 @@ class ErlangRendererTest {
     String expected =
         """
         -module(sigv4test_service_sigv4).
-        -export([sign/3]).
         -include("runtime_types.hrl").
+        -export([
+            sign/3
+        ]).
 
         -type client_config() :: #{binary() => term()}.
 

@@ -34,10 +34,8 @@
 -type tagged_error() :: #tagged_error{}.
 
 -type client_config() :: #{binary() => term()}.
--type credentials() :: #{
-    access_key := binary(),
-    secret_key := binary(),
-    token => binary() | undefined
-}.
+-type credentials() ::
+    #{access_key := binary(), secret_key := binary(), token => binary()
+    | undefined}.
 
 -endif.

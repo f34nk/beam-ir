@@ -1,4 +1,1 @@
-#{
-    <<"field_a">> => FieldA,
-    <<"field_b">> => FieldB
-}
+#{<<"field_a">> => FieldA, <<"field_b">> => FieldB}

@@ -23,7 +23,7 @@
 -type config() :: #{binary() => term()}.
 
 %% @doc Decode input with spec and documentation.
--spec decode(undefined | null | map()) -> undefined | item().
+-spec decode(undefined | null | map()) -> undefined | #item{}.
 decode(undefined) ->
     undefined;
 decode(null) ->
@@ -39,45 +39,31 @@ encode(undefined) ->
     undefined;
 encode(Record) ->
     maps:filter(
-        fun(_, V) -> V =/= undefined end,
+        fun(_, V) -> (V =/= undefined) end,
         #{<<"name">> => Record#item.name, <<"count">> => Record#item.count}
     ).
 
-no_spec_no_doc(undefined) ->
-    undefined;
-no_spec_no_doc(Value) ->
-    Value.
+no_spec_no_doc(undefined) -> undefined;
+no_spec_no_doc(Value) -> Value.
 
--spec with_spec_and_doc(item()) -> map().
 %% @doc Return a plain map from a record.
-with_spec_and_doc(Record) ->
-    #{name => Record#item.name, count => Record#item.count}.
+-spec with_spec_and_doc(item()) -> map().
+with_spec_and_doc(Record) -> #{name => Record#item.name, count => Record#item.count}.
 
 -spec with_spec_no_doc(binary()) -> atom() | {unknown, binary()}.
-with_spec_no_doc(<<"a">>) ->
-    a;
-with_spec_no_doc(<<"b">>) ->
-    b;
-with_spec_no_doc(V) when is_binary(V) ->
-    {unknown, V}.
+with_spec_no_doc(<<"a">>) -> a;
+with_spec_no_doc(<<"b">>) -> b;
+with_spec_no_doc(V) when is_binary(V) -> {unknown, V}.
 
-decode_enum(<<"a">>) ->
-    a;
-decode_enum(<<"b">>) ->
-    b;
-decode_enum(V) when is_binary(V) ->
-    {unknown, V};
-decode_enum(null) ->
-    undefined;
-decode_enum(undefined) ->
-    undefined.
+decode_enum(<<"a">>) -> a;
+decode_enum(<<"b">>) -> b;
+decode_enum(V) when is_binary(V) -> {unknown, V};
+decode_enum(null) -> undefined;
+decode_enum(undefined) -> undefined.
 
-encode_enum(a) ->
-    <<"a">>;
-encode_enum(b) ->
-    <<"b">>;
-encode_enum(undefined) ->
-    undefined.
+encode_enum(a) -> <<"a">>;
+encode_enum(b) -> <<"b">>;
+encode_enum(undefined) -> undefined.
 
 decode_union(Map = #{}) ->
     case maps:to_list(Map) of
@@ -91,14 +77,10 @@ decode_union(undefined) ->
 decode_union(null) ->
     undefined.
 
-encode_union({left, V}) ->
-    #{<<"left">> => V};
-encode_union({right, V}) ->
-    #{<<"right">> => V};
-encode_union({unknown, K}) when is_binary(K) ->
-    #{K => null};
-encode_union(undefined) ->
-    undefined.
+encode_union({left, V}) -> #{<<"left">> => V};
+encode_union({right, V}) -> #{<<"right">> => V};
+encode_union({unknown, K}) when is_binary(K) -> #{K => null};
+encode_union(undefined) -> undefined.
 
 dispatch(Config, Request) ->
     Handler = maps:get(handler, Config, ?DEFAULT_HANDLER),
@@ -159,8 +141,8 @@ transform(Config, #request{path = Path, query = Query, headers = Headers}) ->
         body = ReqUrl
     }.
 
--spec with_retry(fun(() -> term()), map()) -> term().
 %% @doc Invoke {@code Fun} with exponential backoff on retryable errors.
+-spec with_retry(fun(() -> term()), map()) -> term().
 with_retry(Fun, Opts) ->
     Max = maps:get(max_attempts, Opts, 3),
     Base = maps:get(base_delay_ms, Opts, 100),
@@ -175,25 +157,22 @@ with_retry(Fun, Attempts, Base, N) ->
         {error, _} = Err ->
             case retryable(Err) of
                 true when Attempts > 1 ->
-                    timer:sleep(trunc(Base * math:pow(2, N - 1))),
-                    with_retry(Fun, Attempts - 1, Base, N + 1);
+                    timer:sleep(trunc((Base * math:pow(2, (N - 1))))),
+                    with_retry(Fun, (Attempts - 1), Base, (N + 1));
                 _ ->
                     Err
             end
     end.
 
-retryable({error, #tagged_error{}}) ->
-    true;
-retryable(_) ->
-    false.
+retryable({error, #tagged_error{}}) -> true;
+retryable(_) -> false.
 
 -spec risky_call(fun(() -> term())) -> term() | {error, term()}.
 risky_call(Fun) ->
     try
         Fun()
     catch
-        _:Reason ->
-            {error, Reason}
+        _:Reason -> {error, Reason}
     end.
 
 -spec helpers() -> term().
@@ -221,16 +200,11 @@ fetch(Key) ->
         V -> {ok, V}
     end.
 
-encode_value(V) when is_boolean(V) ->
-    atom_to_binary(V, utf8);
-encode_value(V) when is_integer(V) ->
-    integer_to_binary(V);
-encode_value(V) when is_float(V) ->
-    float_to_binary(V);
-encode_value(V) when is_binary(V) ->
-    V;
-encode_value(V) when is_atom(V) ->
-    atom_to_binary(V, utf8).
+encode_value(V) when is_boolean(V) -> atom_to_binary(V, utf8);
+encode_value(V) when is_integer(V) -> integer_to_binary(V);
+encode_value(V) when is_float(V) -> float_to_binary(V);
+encode_value(V) when is_binary(V) -> V;
+encode_value(V) when is_atom(V) -> atom_to_binary(V, utf8).
 
 coalesce([H | Rest]) ->
     case H of
@@ -241,48 +215,42 @@ coalesce([H | Rest]) ->
 coalesce([]) ->
     undefined.
 
-resolve_host(Config) ->
-    maps:get(host, Config, <<"localhost">>).
+resolve_host(Config) -> maps:get(host, Config, <<"localhost">>).
 
 split_base_url(<<>>) ->
     {<<>>, <<>>};
 split_base_url(BaseUrl) ->
     case uri_string:parse(binary_to_list(BaseUrl)) of
-        #{scheme := Scheme, host := Host} = Parts ->
+        Parts = #{scheme := Scheme, host := Host} ->
             PortSuffix =
                 case maps:get(port, Parts, undefined) of
                     undefined -> <<>>;
                     Port -> <<":", (integer_to_binary(Port))/binary>>
                 end,
-            {<<(list_to_binary(Scheme))/binary, "://">>, <<
-                (list_to_binary(Host))/binary, PortSuffix/binary
-            >>};
+            {<<(list_to_binary(Scheme))/binary, "://">>, <<(list_to_binary(Host))/binary,
+                PortSuffix/binary>>};
         _ ->
             {<<>>, BaseUrl}
     end.
 
-parse_header([$[ | _] = Line) ->
-    string:trim(Line);
-parse_header(Line) ->
-    Line.
+parse_header([$[ | _] = Line) -> string:trim(Line);
+parse_header(Line) -> string:trim(Line).
 
 flatten_pairs(Map) when is_map(Map) ->
     lists:append([
         flatten_entry(<<Key/binary, ".", (integer_to_binary(I))/binary>>, V)
-     || {I, {Key, V}} <- lists:enumerate(maps:to_list(Map)), V =/= undefined
+     || {I, {Key, V}} <- lists:enumerate(maps:to_list(Map)),
+        V =/= undefined
     ]).
 
-flatten_entry(_Key, undefined) ->
-    [];
-flatten_entry(Key, Value) when is_map(Value) ->
-    [{Key, Value}];
-flatten_entry(Key, Value) ->
-    [{Key, Value}].
+flatten_entry(_Key, undefined) -> [];
+flatten_entry(Key, Value) when is_map(Value) -> [{Key, Value}];
+flatten_entry(Key, Value) -> [{Key, Value}].
 
 content_type_matches(Headers, Expected) ->
     case proplists:get_value(<<"content-type">>, Headers, undefined) of
         Expected -> true;
-        <<_/binary>> = CT -> ct_base(CT) =:= ct_base(Expected);
+        <<_/binary>> = CT -> (ct_base(CT) =:= ct_base(Expected));
         _ -> false
     end.
 
@@ -313,12 +281,9 @@ decode_sparse_map(Map) when is_map(Map) ->
         Map
     ).
 
-decode_list(undefined) ->
-    undefined;
-decode_list(null) ->
-    undefined;
-decode_list(List) when is_list(List) ->
-    [V || V <- List, V =/= null].
+decode_list(undefined) -> undefined;
+decode_list(null) -> undefined;
+decode_list(List) when is_list(List) -> [V || V <- List, V =/= null].
 
 decode_json_body(<<>>) ->
     #{};
@@ -356,16 +321,18 @@ prefix_headers_to_list(_Prefix, undefined) ->
 prefix_headers_to_list(Prefix, Map) when is_map(Map) ->
     [{<<Prefix/binary, H/binary>>, to_binary(V)} || {H, V} <- maps:to_list(Map)].
 
-prefix_headers_from_list(Prefix, Headers) ->
-    [
-        {binary:part(Name, byte_size(Prefix), byte_size(Name) - byte_size(Prefix)), Value}
-     || {Name, Value} <- Headers,
+prefix_headers_from_list(Headers, Prefix) ->
+    Map = maps:from_list([
+        {binary:part(Name, byte_size(Prefix)), Val}
+     || {Name, Val} <- Headers,
+        byte_size(Name) > byte_size(Prefix),
         binary:part(Name, 0, byte_size(Prefix)) =:= Prefix
-    ].
+    ]),
+    case maps:size(Map) of
+        0 -> undefined;
+        _ -> Map
+    end.
 
-to_binary(V) when is_binary(V) ->
-    V;
-to_binary(V) when is_atom(V) ->
-    atom_to_binary(V, utf8);
-to_binary(V) when is_integer(V) ->
-    integer_to_binary(V).
+to_binary(V) when is_binary(V) -> V;
+to_binary(V) when is_atom(V) -> atom_to_binary(V, utf8);
+to_binary(V) when is_integer(V) -> integer_to_binary(V).
