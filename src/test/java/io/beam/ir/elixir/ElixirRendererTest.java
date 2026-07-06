@@ -41,8 +41,7 @@ class ElixirRendererTest {
     assertEquals(
         "[1, 2, 3]",
         ElixirRenderer.renderExpression(
-            ListExpr.of(
-                List.of(IntegerExpr.of(1), IntegerExpr.of(2), IntegerExpr.of(3)))));
+            ListExpr.of(List.of(IntegerExpr.of(1), IntegerExpr.of(2), IntegerExpr.of(3)))));
   }
 
   @Test
@@ -59,8 +58,7 @@ class ElixirRendererTest {
     assertEquals(
         "acc %{key: val}",
         ElixirRenderer.renderExpression(
-            MapExpr.of(
-                Variable.of("acc"), List.of(MapEntry.atomKey("key", Variable.of("val"))))));
+            MapExpr.of(Variable.of("acc"), List.of(MapEntry.atomKey("key", Variable.of("val"))))));
   }
 
   @Test
@@ -96,8 +94,7 @@ class ElixirRendererTest {
         ElixirRenderer.renderPattern(
             new StructPattern(
                 null,
-                List.of(
-                    new StructPatternField("headers", VariablePattern.of("headers"), null)),
+                List.of(new StructPatternField("headers", VariablePattern.of("headers"), null)),
                 null)));
   }
 
@@ -107,9 +104,7 @@ class ElixirRendererTest {
         "Map.fetch!(config, :credentials)",
         ElixirRenderer.renderExpression(
             RemoteCallExpr.of(
-                "Map",
-                "fetch!",
-                List.of(Variable.of("config"), AtomExpr.of("credentials")))));
+                "Map", "fetch!", List.of(Variable.of("config"), AtomExpr.of("credentials")))));
   }
 
   @Test
@@ -180,13 +175,10 @@ class ElixirRendererTest {
         ElixirRenderer.renderExpression(
             new CaseExpr(
                 RemoteCallExpr.of(
-                    "RuntimeHttp",
-                    "dispatch",
-                    List.of(Variable.of("config"), Variable.of("req"))),
+                    "RuntimeHttp", "dispatch", List.of(Variable.of("config"), Variable.of("req"))),
                 List.of(
                     Clause.of(
-                        TuplePattern.of(
-                            List.of(AtomPattern.of("ok"), VariablePattern.of("resp"))),
+                        TuplePattern.of(List.of(AtomPattern.of("ok"), VariablePattern.of("resp"))),
                         RemoteCallExpr.of(
                             "HttpServiceRestJson1",
                             "decode_get_name_response",
@@ -194,9 +186,7 @@ class ElixirRendererTest {
                     Clause.of(
                         TuplePattern.of(
                             List.of(AtomPattern.of("error"), VariablePattern.of("reason"))),
-                        TupleExpr.of(
-                            List.of(
-                                AtomExpr.of("error"), Variable.of("reason"))))),
+                        TupleExpr.of(List.of(AtomExpr.of("error"), Variable.of("reason"))))),
                 null));
     assertEquals(
         """
@@ -213,8 +203,7 @@ class ElixirRendererTest {
         "if(body == \"\", do: %{}, else: Jason.decode!(body))",
         ElixirRenderer.renderExpression(
             new IfExpr(
-                new InfixExpr(
-                    Variable.of("body"), "==", StringExpr.of(""), null),
+                new InfixExpr(Variable.of("body"), "==", StringExpr.of(""), null),
                 MapExpr.of(List.of()),
                 RemoteCallExpr.of("Jason", "decode!", List.of(Variable.of("body"))),
                 true,
@@ -227,9 +216,7 @@ class ElixirRendererTest {
         "fn x -> x end",
         ElixirRenderer.renderExpression(
             new AnonFun(
-                List.of(
-                    new AnonFunClause(
-                        List.of(VariablePattern.of("x")), Variable.of("x"), null)),
+                List.of(AnonFunClause.of(List.of(VariablePattern.of("x")), Variable.of("x"))),
                 null)));
   }
 
@@ -273,8 +260,7 @@ class ElixirRendererTest {
         renderer.renderGuardForTest(
             AndGuard.of(
                 List.of(
-                    IsTypeGuard.of("is_binary", "id"),
-                    IsTypeGuard.of("is_binary", "secret")))));
+                    IsTypeGuard.of("is_binary", "id"), IsTypeGuard.of("is_binary", "secret")))));
     assertEquals(
         "map == %{}",
         renderer.renderGuardForTest(
@@ -294,7 +280,6 @@ class ElixirRendererTest {
                 null,
                 null,
                 true,
-                null,
                 null)));
   }
 
@@ -318,7 +303,6 @@ class ElixirRendererTest {
                 Spec.of("encode(list()) :: binary()"),
                 FunctionDoc.of("Encodes events"),
                 true,
-                null,
                 null)));
   }
 
@@ -336,14 +320,11 @@ class ElixirRendererTest {
                 true,
                 List.of(
                     FunctionHead.of(
-                        List.of(VariablePattern.of("v")),
-                        IsTypeGuard.of("is_binary", "v"))),
-                TupleExpr.of(
-                    List.of(AtomExpr.of("unknown"), Variable.of("v"))),
+                        List.of(VariablePattern.of("v")), IsTypeGuard.of("is_binary", "v"))),
+                TupleExpr.of(List.of(AtomExpr.of("unknown"), Variable.of("v"))),
                 null,
                 null,
                 false,
-                null,
                 null)));
   }
 
@@ -355,22 +336,19 @@ class ElixirRendererTest {
             false,
             List.of(
                 FunctionHead.of(
-                    List.of(VariablePattern.of("events")),
-                    IsTypeGuard.of("is_list", "events"))),
+                    List.of(VariablePattern.of("events")), IsTypeGuard.of("is_list", "events"))),
             LocalCallExpr.of(
                 "Enum.map",
-                List.of(
-                    Variable.of("events"),
-                    CaptureExpr.of("encode_event_stream_event", 1))),
+                List.of(Variable.of("events"), CaptureExpr.of("encode_event_stream_event", 1))),
             null,
             FunctionDoc.of("Encodes a list of event stream events into framed binaries."),
             false,
-            null,
             null);
     assertEquals(
         """
         defmodule EventStreamRestJsonServiceEventStream do
           @moduledoc "Generated helpers"
+
           alias EventStreamRestJsonServiceTypes
 
           @doc "Encodes a list of event stream events into framed binaries."
@@ -385,9 +363,10 @@ class ElixirRendererTest {
                 Moduledoc.of("Generated helpers"),
                 List.of(),
                 List.of(Alias.of("EventStreamRestJsonServiceTypes")),
-                List.of(encode),
                 List.of(),
-                null)));
+                List.of(),
+                List.of(),
+                List.of(encode))));
   }
 
   @Test
@@ -412,7 +391,320 @@ class ElixirRendererTest {
                     "t",
                     "%__MODULE__{\n          name: HttpServiceClient.name() | nil\n        }",
                     null),
-                List.of(DefstructField.field("name")),
+                List.of(DefstructField.field("name")))));
+  }
+
+  @Test
+  void rendersDotCallExpr() {
+    assertEquals("fun.()", ElixirRenderer.renderExpression(dotCall(Variable.of("fun"), List.of())));
+    assertEquals(
+        "handler.(ctx, input, meta)",
+        ElixirRenderer.renderExpression(
+            dotCall(
+                Variable.of("handler"),
+                List.of(Variable.of("ctx"), Variable.of("input"), Variable.of("meta")))));
+    assertEquals(
+        "v.(:syntax)",
+        ElixirRenderer.renderExpression(dotCall(Variable.of("v"), List.of(AtomExpr.of("syntax")))));
+  }
+
+  @Test
+  void rendersBlockExpr() {
+    assertEquals(
+        """
+        result =
+          case fetch("x") do
+            {:ok, value} -> value
+            :error -> :default
+          end
+
+        filtered = Enum.filter_map([result], fn v -> v end)
+
+        if length(filtered) > 0 do
+          hd(filtered)
+        else
+          nil
+        end""",
+        ElixirRenderer.renderExpression(
+            new BlockExpr(
+                List.of(
+                    MatchExpr.bind(
+                        "result",
+                        new CaseExpr(
+                            LocalCallExpr.of("fetch", List.of(StringExpr.of("x"))),
+                            List.of(
+                                Clause.of(
+                                    TuplePattern.of(
+                                        List.of(
+                                            AtomPattern.of("ok"), VariablePattern.of("value"))),
+                                    Variable.of("value")),
+                                Clause.of(AtomPattern.of("error"), AtomExpr.of("default"))),
+                            null)),
+                    MatchExpr.bind(
+                        "filtered",
+                        RemoteCallExpr.of(
+                            "Enum",
+                            "filter_map",
+                            List.of(
+                                ListExpr.of(List.of(Variable.of("result"))),
+                                new AnonFun(
+                                    List.of(
+                                        AnonFunClause.of(
+                                            List.of(VariablePattern.of("v")), Variable.of("v"))),
+                                    null)))),
+                    new IfExpr(
+                        new InfixExpr(
+                            LocalCallExpr.of("length", List.of(Variable.of("filtered"))),
+                            ">",
+                            IntegerExpr.of(0),
+                            null),
+                        LocalCallExpr.of("hd", List.of(Variable.of("filtered"))),
+                        NilExpr.of(),
+                        false,
+                        null)),
                 null)));
+  }
+
+  @Test
+  void rendersTryExpr() {
+    assertEquals(
+        """
+        try do
+          fun.()
+        catch
+          _, reason -> {:error, reason}
+        end""",
+        ElixirRenderer.renderExpression(
+            new TryExpr(
+                dotCall(Variable.of("fun"), List.of()),
+                List.of(
+                    new CatchClause(
+                        WildcardPattern.of(),
+                        VariablePattern.of("reason"),
+                        TupleExpr.of(List.of(AtomExpr.of("error"), Variable.of("reason"))),
+                        null)),
+                null)));
+  }
+
+  @Test
+  void rendersMultilinePipeExpr() {
+    assertEquals(
+        """
+        %{"name" => record.name, "count" => record.count}
+        |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+        |> Map.new()""",
+        ElixirRenderer.renderExpression(
+            new PipeExpr(
+                MapExpr.of(
+                    List.of(
+                        MapEntry.stringKey("name", dot(Variable.of("record"), "name")),
+                        MapEntry.stringKey("count", dot(Variable.of("record"), "count")))),
+                List.of(
+                    new PipeStep(
+                        RemoteCallExpr.of(
+                            "Enum",
+                            "reject",
+                            List.of(
+                                new AnonFun(
+                                    List.of(
+                                        AnonFunClause.of(
+                                            List.of(
+                                                TuplePattern.of(
+                                                    List.of(
+                                                        VariablePattern.of("_k"),
+                                                        VariablePattern.of("v")))),
+                                            LocalCallExpr.of("is_nil", List.of(Variable.of("v"))))),
+                                    null))),
+                        List.of(),
+                        null),
+                    new PipeStep(RemoteCallExpr.of("Map", "new", List.of()), List.of(), null)),
+                null)));
+  }
+
+  @Test
+  void rendersNestedCaseWithInlineClauseBodies() {
+    assertEquals(
+        """
+        decoded =
+          case body do
+            "" ->
+              %{}
+
+            _ ->
+              case Jason.decode(body) do
+                {:ok, val} -> val
+                {:error, _} -> %{}
+              end
+          end""",
+        ElixirRenderer.renderExpression(
+            MatchExpr.bind(
+                "decoded",
+                new CaseExpr(
+                    Variable.of("body"),
+                    List.of(
+                        Clause.of(StringPattern.of(""), MapExpr.of(List.of())),
+                        Clause.of(
+                            WildcardPattern.of(),
+                            new CaseExpr(
+                                RemoteCallExpr.of("Jason", "decode", List.of(Variable.of("body"))),
+                                List.of(
+                                    Clause.of(
+                                        TuplePattern.of(
+                                            List.of(
+                                                AtomPattern.of("ok"), VariablePattern.of("val"))),
+                                        Variable.of("val")),
+                                    Clause.of(
+                                        TuplePattern.of(
+                                            List.of(
+                                                AtomPattern.of("error"), WildcardPattern.of())),
+                                        MapExpr.of(List.of()))),
+                                null))),
+                    null))));
+  }
+
+  @Test
+  void rendersMatchExprWithTuplePattern() {
+    assertEquals(
+        """
+        {scheme, authority} = split_base_url(base_url)
+        req_url = scheme <> authority <> path""",
+        ElixirRenderer.renderExpression(
+            new BlockExpr(
+                List.of(
+                    MatchExpr.bind(
+                        TuplePattern.of(
+                            List.of(
+                                VariablePattern.of("scheme"), VariablePattern.of("authority"))),
+                        LocalCallExpr.of("split_base_url", List.of(Variable.of("base_url")))),
+                    MatchExpr.bind(
+                        "req_url",
+                        new InfixExpr(
+                            new InfixExpr(
+                                Variable.of("scheme"), "<>", Variable.of("authority"), null),
+                            "<>",
+                            Variable.of("path"),
+                            null))),
+                null)));
+  }
+
+  @Test
+  void rendersBlockIfExpr() {
+    assertEquals(
+        """
+        if retryable?(err) and attempts > 1 do
+          Process.sleep(base)
+          with_retry(fun, attempts - 1, base, n + 1)
+        else
+          err
+        end""",
+        ElixirRenderer.renderExpression(
+            new IfExpr(
+                new InfixExpr(
+                    LocalCallExpr.of("retryable?", List.of(Variable.of("err"))),
+                    "and",
+                    new InfixExpr(Variable.of("attempts"), ">", IntegerExpr.of(1), null),
+                    null),
+                new BlockExpr(
+                    List.of(
+                        RemoteCallExpr.of(
+                            "Process", "sleep", List.of(Variable.of("base"))),
+                        LocalCallExpr.of(
+                            "with_retry",
+                            List.of(
+                                Variable.of("fun"),
+                                new InfixExpr(
+                                    Variable.of("attempts"), "-", IntegerExpr.of(1), null),
+                                Variable.of("base"),
+                                new InfixExpr(
+                                    Variable.of("n"), "+", IntegerExpr.of(1), null)))),
+                    null),
+                Variable.of("err"),
+                false,
+                null)));
+  }
+
+  @Test
+  void rendersMultilineStructExpr() {
+    assertEquals(
+        """
+        %Item{
+          name: Map.get(map, "name"),
+          count: Map.get(map, "count")
+        }""",
+        ElixirRenderer.renderExpression(
+            StructExpr.of(
+                "Item",
+                List.of(
+                    StructField.of(
+                        "name",
+                        RemoteCallExpr.of(
+                            "Map", "get", List.of(Variable.of("map"), StringExpr.of("name")))),
+                    StructField.of(
+                        "count",
+                        RemoteCallExpr.of(
+                            "Map", "get", List.of(Variable.of("map"), StringExpr.of("count"))))))));
+  }
+
+  @Test
+  void rendersGroupedFunctionHeads() {
+    assertEquals(
+        "def encode_union({:left, v}), do: %{\"left\" => v}\n",
+        ElixirRenderer.renderFunction(
+            new Function(
+                "encode_union",
+                false,
+                List.of(
+                    FunctionHead.of(
+                        List.of(
+                            TuplePattern.of(
+                                List.of(AtomPattern.of("left"), VariablePattern.of("v")))))),
+                MapExpr.of(List.of(MapEntry.stringKey("left", Variable.of("v")))),
+                null,
+                null,
+                true,
+                null)));
+    assertEquals(
+        "def encode_union({:right, v}), do: %{\"right\" => v}\n",
+        ElixirRenderer.renderFunction(
+            new Function(
+                "encode_union",
+                false,
+                List.of(
+                    FunctionHead.of(
+                        List.of(
+                            TuplePattern.of(
+                                List.of(AtomPattern.of("right"), VariablePattern.of("v")))))),
+                MapExpr.of(List.of(MapEntry.stringKey("right", Variable.of("v")))),
+                null,
+                null,
+                true,
+                null)));
+  }
+
+  @Test
+  void rendersAnonFunWithGuard() {
+    assertEquals(
+        """
+        fn
+          v when v != nil -> encode_value(v)
+          _ -> :pop
+        end""",
+        ElixirRenderer.renderExpression(
+            new AnonFun(
+                List.of(
+                    AnonFunClause.of(
+                        List.of(VariablePattern.of("v")),
+                        new ComparisonGuard(Variable.of("v"), "!=", NilExpr.of(), null),
+                        LocalCallExpr.of("encode_value", List.of(Variable.of("v")))),
+                    AnonFunClause.of(List.of(WildcardPattern.of()), AtomExpr.of("pop"))),
+                null)));
+  }
+
+  private static DotCallExpr dotCall(Expression receiver, List<Expression> args) {
+    return new DotCallExpr(receiver, "()", args, null);
+  }
+
+  private static DotCallExpr dot(Expression receiver, String field) {
+    return new DotCallExpr(receiver, field, List.of(), null);
   }
 }

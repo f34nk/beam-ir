@@ -55,6 +55,8 @@ final class DefaultElixirRenderer implements Renderer {
         }
         render(guards.get(i), out);
       }
+    } else if (guard instanceof OpaqueGuard opaqueGuard) {
+      out.append(opaqueGuard.text());
     } else {
       throw new IllegalArgumentException("Unsupported guard: " + guard);
     }
@@ -74,7 +76,7 @@ final class DefaultElixirRenderer implements Renderer {
     } else if (expression instanceof BooleanExpr bool) {
       out.append(bool.value());
     } else if (expression instanceof OpaqueExpr opaque) {
-      out.append(opaque.text());
+      renderOpaque(opaque, out, indent);
     } else if (expression instanceof TupleExpr tuple) {
       render(tuple, out, indent);
     } else if (expression instanceof ListExpr list) {
@@ -115,6 +117,56 @@ final class DefaultElixirRenderer implements Renderer {
       render(binary, out, indent);
     } else {
       throw new IllegalArgumentException("Unsupported expression: " + expression);
+    }
+  }
+
+  private void renderOpaque(OpaqueExpr opaque, StringBuilder out, String indent) {
+    String text = opaque.text().stripTrailing();
+    if (!text.contains("\n")) {
+      out.append(text);
+      return;
+    }
+    String[] rawLines = text.split("\n", -1);
+    int end = rawLines.length;
+    while (end > 0 && rawLines[end - 1].isEmpty()) {
+      end--;
+    }
+    int blockDepth = 0;
+    boolean matchContinuation = false;
+    boolean clauseBody = false;
+    for (int i = 0; i < end; i++) {
+      String line = rawLines[i].stripLeading();
+      if (line.isEmpty()) {
+        out.append('\n');
+        continue;
+      }
+      if ("end".equals(line)) {
+        blockDepth = Math.max(0, blockDepth - 1);
+      }
+      if (i > 0 && !rawLines[i - 1].isEmpty()) {
+        out.append('\n');
+      }
+      out.append(indent);
+      int extraDepth = blockDepth + (matchContinuation ? 1 : 0);
+      if (line.contains(" ->") && !line.endsWith(" do")) {
+        clauseBody = true;
+      } else if (clauseBody && !line.isEmpty()) {
+        extraDepth = blockDepth + 1;
+      }
+      for (int depth = 0; depth < extraDepth; depth++) {
+        out.append(INDENT);
+      }
+      out.append(line);
+      matchContinuation = line.endsWith("=");
+      if (line.endsWith(" do")) {
+        blockDepth++;
+        clauseBody = false;
+      }
+      if (line.contains(" ->") && !line.endsWith(" do")) {
+        // keep clauseBody true for following lines
+      } else if (!line.isEmpty() && !line.contains(" ->")) {
+        clauseBody = false;
+      }
     }
   }
 
@@ -208,8 +260,7 @@ final class DefaultElixirRenderer implements Renderer {
     out.append('\n').append(indent).append(close);
   }
 
-  private boolean collectionExceedsPrintWidth(
-      List<Expression> elements, char open, char close) {
+  private boolean collectionExceedsPrintWidth(List<Expression> elements, char open, char close) {
     return exceedsPrintWidth(
         scratch -> {
           scratch.append(open);
@@ -264,7 +315,7 @@ final class DefaultElixirRenderer implements Renderer {
     }
     render(pipe.initial(), out, indent);
     for (PipeStep step : pipe.steps()) {
-      out.append("\n|> ");
+      out.append('\n').append(indent).append("|> ");
       renderPipeStep(step, out, indent);
     }
   }
@@ -289,12 +340,23 @@ final class DefaultElixirRenderer implements Renderer {
   }
 
   private void render(MatchExpr match, StringBuilder out, String indent) {
-    out.append(match.name()).append(" = ");
-    render(match.value(), out, indent);
+    render(match.pattern(), out);
+    out.append(" =");
+    if (match.value() instanceof CaseExpr || matchValueExceedsPrintWidth(match.value())) {
+      out.append('\n').append(indent).append(INDENT);
+      render(match.value(), out, indent + INDENT);
+    } else {
+      out.append(' ');
+      render(match.value(), out, indent);
+    }
     if (match.bodyOrNull() != null) {
-      out.append('\n').append(indent);
+      out.append("\n\n").append(indent);
       render(match.bodyOrNull(), out, indent);
     }
+  }
+
+  private boolean matchValueExceedsPrintWidth(Expression value) {
+    return exceedsPrintWidth(scratch -> render(value, scratch, ""));
   }
 
   private void render(InterpolatedStringExpr string, StringBuilder out, String indent) {
@@ -312,10 +374,14 @@ final class DefaultElixirRenderer implements Renderer {
   }
 
   private void render(CaseExpr caseExpr, StringBuilder out, String indent) {
-    out.append("case ");
-    render(caseExpr.subject(), out, indent);
+    out.append("case");
+    if (caseExpr.subjectOrNull() != null) {
+      out.append(' ');
+      render(caseExpr.subjectOrNull(), out, indent);
+    }
     out.append(" do\n");
     List<Clause> clauses = caseExpr.clauses();
+    boolean multilineCase = clauses.stream().anyMatch(c -> usesMultilineCaseBody(c.body()));
     for (int i = 0; i < clauses.size(); i++) {
       if (i > 0 && usesBlankLineBetweenCaseClauses(clauses.get(i - 1), clauses.get(i))) {
         out.append('\n');
@@ -324,7 +390,7 @@ final class DefaultElixirRenderer implements Renderer {
       render(clauses.get(i).pattern(), out);
       out.append(" ->");
       Expression body = clauses.get(i).body();
-      if (usesMultilineCaseBody(body)) {
+      if (multilineCase || usesMultilineCaseBody(body)) {
         out.append('\n');
         out.append(indent).append(INDENT).append(INDENT);
         render(body, out, indent + INDENT + INDENT);
@@ -348,7 +414,9 @@ final class DefaultElixirRenderer implements Renderer {
         || body instanceof BlockExpr
         || body instanceof MatchExpr
         || body instanceof TryExpr
-        || body instanceof AnonFun;
+        || body instanceof AnonFun
+        || body instanceof OpaqueExpr opaque && opaque.text().contains("\n")
+        || body instanceof IfExpr ifExpr && !ifExpr.inline();
   }
 
   private void render(IfExpr ifExpr, StringBuilder out, String indent) {
@@ -381,6 +449,15 @@ final class DefaultElixirRenderer implements Renderer {
     for (int i = 0; i < block.statements().size(); i++) {
       if (i > 0) {
         out.append('\n');
+        Expression previous = block.statements().get(i - 1);
+        Expression current = block.statements().get(i);
+        if (previous instanceof MatchExpr match) {
+          boolean multiline =
+              match.value() instanceof CaseExpr || matchValueExceedsPrintWidth(match.value());
+          if (multiline || !(current instanceof MatchExpr)) {
+            out.append('\n');
+          }
+        }
         if (!indent.isEmpty()) {
           out.append(indent);
         }
@@ -391,7 +468,9 @@ final class DefaultElixirRenderer implements Renderer {
 
   private void render(AnonFun fun, StringBuilder out, String indent) {
     List<AnonFunClause> clauses = fun.clauses();
-    if (clauses.size() == 1 && isCompactAnonFun(clauses.get(0))) {
+    if (clauses.size() == 1
+        && isCompactAnonFun(clauses.get(0))
+        && clauses.get(0).guardOrNull() == null) {
       AnonFunClause clause = clauses.get(0);
       out.append("fn ");
       renderAnonFunParams(clause.params(), out);
@@ -404,9 +483,12 @@ final class DefaultElixirRenderer implements Renderer {
     for (int i = 0; i < clauses.size(); i++) {
       out.append(indent).append(INDENT);
       renderAnonFunParams(clauses.get(i).params(), out);
-      out.append(" ->\n");
-      out.append(indent).append(INDENT).append(INDENT);
-      render(clauses.get(i).body(), out, indent + INDENT + INDENT);
+      if (clauses.get(i).guardOrNull() != null) {
+        out.append(" when ");
+        render(clauses.get(i).guardOrNull(), out);
+      }
+      out.append(" -> ");
+      render(clauses.get(i).body(), out, indent + INDENT);
       if (i < clauses.size() - 1) {
         out.append('\n');
       }
@@ -541,6 +623,18 @@ final class DefaultElixirRenderer implements Renderer {
   }
 
   private void render(DotCallExpr call, StringBuilder out, String indent) {
+    if ("()".equals(call.function()) || ".".equals(call.function())) {
+      render(call.receiver(), out, indent);
+      out.append(".(");
+      renderCommaSeparated(call.args(), out, indent);
+      out.append(')');
+      return;
+    }
+    if (call.args().isEmpty() && !call.function().contains(".")) {
+      render(call.receiver(), out, indent);
+      out.append('.').append(call.function());
+      return;
+    }
     String qualified = call.function();
     int dot = qualified.lastIndexOf('.');
     String target = dot >= 0 ? qualified : qualified;
@@ -651,6 +745,9 @@ final class DefaultElixirRenderer implements Renderer {
   }
 
   private boolean structExceedsPrintWidth(StructExpr struct) {
+    if (struct.fields().size() > 1) {
+      return true;
+    }
     return exceedsPrintWidth(
         scratch -> {
           scratch.append('%').append(struct.moduleName()).append('{');
@@ -706,6 +803,19 @@ final class DefaultElixirRenderer implements Renderer {
         render(entry.value(), out);
       }
       out.append('}');
+    } else if (pattern instanceof NilPattern) {
+      out.append("nil");
+    } else if (pattern instanceof ConsListPattern cons) {
+      out.append('[');
+      render(cons.head(), out);
+      out.append(" | ");
+      render(cons.tail(), out);
+      out.append(']');
+    } else if (pattern instanceof AssignPattern assign) {
+      out.append(assign.name()).append(" = ");
+      render(assign.pattern(), out);
+    } else if (pattern instanceof OpaquePattern opaque) {
+      out.append(opaque.text());
     } else {
       throw new IllegalArgumentException("Unsupported pattern: " + pattern);
     }
@@ -734,8 +844,7 @@ final class DefaultElixirRenderer implements Renderer {
     out.append('}');
   }
 
-  private void renderStructPatternFields(
-      List<StructPatternField> fields, StringBuilder out) {
+  private void renderStructPatternFields(List<StructPatternField> fields, StringBuilder out) {
     for (int i = 0; i < fields.size(); i++) {
       if (i > 0) {
         out.append(", ");
@@ -838,51 +947,114 @@ final class DefaultElixirRenderer implements Renderer {
 
   @Override
   public String render(Module module) {
-    if (module.verbatimOrNull() != null) {
-      return ensureTrailingNewline(module.verbatimOrNull());
-    }
     StringBuilder out = new StringBuilder();
     out.append("defmodule ").append(module.name()).append(" do\n");
+    boolean hasHeader = false;
     if (module.moduledocOrNull() != null) {
       out.append(INDENT)
           .append("@moduledoc ")
-          .append(formatModuledoc(module.moduledocOrNull().text()))
+          .append(formatModuledoc(module.moduledocOrNull()))
           .append('\n');
+      hasHeader = true;
     }
-    for (UseDirective use : module.uses()) {
-      render(use, out, INDENT);
-      out.append('\n');
+    if (!module.uses().isEmpty()) {
+      if (hasHeader) {
+        out.append('\n');
+      }
+      for (UseDirective use : module.uses()) {
+        render(use, out, INDENT);
+        out.append('\n');
+      }
+      hasHeader = true;
     }
-    for (Alias alias : module.aliases()) {
-      render(alias, out, INDENT);
-      out.append('\n');
+    if (!module.aliases().isEmpty()) {
+      if (hasHeader) {
+        out.append('\n');
+      }
+      for (Alias alias : module.aliases()) {
+        render(alias, out, INDENT);
+        out.append('\n');
+      }
+      hasHeader = true;
     }
-    for (String attribute : module.moduleAttributes()) {
-      out.append(INDENT).append(attribute).append('\n');
+    if (!module.moduleAttributes().isEmpty()) {
+      if (hasHeader) {
+        out.append('\n');
+      }
+      for (int i = 0; i < module.moduleAttributes().size(); i++) {
+        out.append(INDENT).append(module.moduleAttributes().get(i)).append('\n');
+      }
+      hasHeader = true;
     }
-    if (!module.functions().isEmpty()
-        && (!module.aliases().isEmpty()
-            || module.moduledocOrNull() != null
-            || !module.uses().isEmpty()
-            || !module.moduleAttributes().isEmpty())) {
+    for (int i = 0; i < module.nestedTypesModules().size(); i++) {
+      if (hasHeader && i == 0) {
+        out.append('\n');
+      }
+      renderNestedTypesModule(module.nestedTypesModules().get(i), out, INDENT);
+      if (i < module.nestedTypesModules().size() - 1) {
+        out.append('\n');
+      }
+      hasHeader = true;
+    }
+    if (!module.trailingModuleAttributes().isEmpty()) {
+      if (hasHeader) {
+        out.append('\n');
+      }
+      for (int i = 0; i < module.trailingModuleAttributes().size(); i++) {
+        int trailingCount = module.trailingModuleAttributes().size();
+        if ((trailingCount == 2 && i == 1) || (trailingCount > 2 && i == trailingCount - 1)) {
+          out.append('\n');
+        }
+        out.append(INDENT).append(module.trailingModuleAttributes().get(i)).append('\n');
+      }
+      hasHeader = true;
+    }
+    if (!module.functions().isEmpty() && hasHeader) {
       out.append('\n');
     }
     for (int i = 0; i < module.functions().size(); i++) {
       if (i > 0) {
+        Function previous = module.functions().get(i - 1);
+        Function current = module.functions().get(i);
         out.append('\n');
+        if (needsBlankLineBetweenFunctions(previous, current)) {
+          out.append('\n');
+        }
       }
       render(module.functions().get(i), out, INDENT);
     }
-    out.append('\n').append("end\n");
+    appendModuleEnd(out);
     return out.toString().stripTrailing() + "\n";
   }
 
-  private static String ensureTrailingNewline(String text) {
-    return text.endsWith("\n") ? text : text + "\n";
+  private static void appendModuleEnd(StringBuilder out) {
+    if (!out.isEmpty() && out.charAt(out.length() - 1) == '\n') {
+      out.append("end\n");
+    } else {
+      out.append('\n').append("end\n");
+    }
   }
 
-  private static String formatModuledoc(String text) {
-    return "\"" + text.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
+  private void renderNestedTypesModule(TypesModule typesModule, StringBuilder out, String indent) {
+    out.append(indent).append("defmodule ").append(typesModule.name()).append(" do\n");
+    render(typesModule.typeDef(), out, indent + INDENT);
+    out.append("\n\n");
+    renderDefstruct(typesModule.defstructFields(), out, indent + INDENT);
+    out.append('\n').append(indent).append("end\n");
+  }
+
+  private static boolean needsBlankLineBetweenFunctions(Function previous, Function current) {
+    if (!previous.name().equals(current.name())) {
+      return true;
+    }
+    return !(previous.oneLiner() && current.oneLiner());
+  }
+
+  private static String formatModuledoc(Moduledoc moduledoc) {
+    if (moduledoc.literal()) {
+      return moduledoc.text();
+    }
+    return "\"" + moduledoc.text().replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
   }
 
   private void render(UseDirective use, StringBuilder out, String indent) {
@@ -908,21 +1080,18 @@ final class DefaultElixirRenderer implements Renderer {
 
   @Override
   public String render(TypesModule typesModule) {
-    if (typesModule.verbatimOrNull() != null) {
-      return ensureTrailingNewline(typesModule.verbatimOrNull());
-    }
     StringBuilder out = new StringBuilder();
     out.append("defmodule ").append(typesModule.name()).append(" do\n");
     if (typesModule.moduledocOrNull() != null) {
       out.append(INDENT)
           .append("@moduledoc ")
-          .append(formatModuledoc(typesModule.moduledocOrNull().text()))
+          .append(formatModuledoc(typesModule.moduledocOrNull()))
           .append("\n\n");
     }
     render(typesModule.typeDef(), out, INDENT);
     out.append("\n\n");
     renderDefstruct(typesModule.defstructFields(), out, INDENT);
-    out.append("\nend\n");
+    appendModuleEnd(out);
     return out.toString().stripTrailing() + "\n";
   }
 
@@ -943,27 +1112,61 @@ final class DefaultElixirRenderer implements Renderer {
   }
 
   private void renderDefstruct(List<DefstructField> fields, StringBuilder out, String indent) {
-    out.append(indent).append("defstruct [");
+    boolean hasDefaults = fields.stream().anyMatch(field -> field.defaultOrNull() != null);
+    if (!hasDefaults) {
+      out.append(indent).append("defstruct [");
+      for (int i = 0; i < fields.size(); i++) {
+        if (i > 0) {
+          out.append(", ");
+        }
+        DefstructField field = fields.get(i);
+        if (field.nameOrNil() != null) {
+          out.append(':').append(field.nameOrNil());
+        } else {
+          out.append("nil");
+        }
+      }
+      out.append(']');
+      return;
+    }
+    if (defstructKeywordsExceedPrintWidth(fields, indent)) {
+      out.append(indent).append("defstruct");
+      for (int i = 0; i < fields.size(); i++) {
+        out.append(i == 0 ? "\n" : ",\n");
+        out.append(indent).append("          ");
+        renderDefstructKeywordField(fields.get(i), out, indent);
+      }
+      return;
+    }
+    out.append(indent).append("defstruct ");
     for (int i = 0; i < fields.size(); i++) {
       if (i > 0) {
         out.append(", ");
       }
-      DefstructField field = fields.get(i);
-      if (field.nameOrNil() != null) {
-        out.append(':').append(field.nameOrNil());
-      } else {
-        out.append("nil");
-      }
+      renderDefstructKeywordField(fields.get(i), out, indent);
     }
-    out.append(']');
+  }
+
+  private void renderDefstructKeywordField(DefstructField field, StringBuilder out, String indent) {
+    out.append(field.nameOrNil()).append(": ");
+    render(field.defaultOrNull(), out, indent);
+  }
+
+  private boolean defstructKeywordsExceedPrintWidth(List<DefstructField> fields, String indent) {
+    return exceedsPrintWidth(
+        scratch -> {
+          scratch.append("defstruct ");
+          for (int i = 0; i < fields.size(); i++) {
+            if (i > 0) {
+              scratch.append(", ");
+            }
+            renderDefstructKeywordField(fields.get(i), scratch, indent);
+          }
+        });
   }
 
   @Override
   public String renderFunction(Function function) {
-    if (function.verbatimOrNull() != null) {
-      String text = function.verbatimOrNull();
-      return text.endsWith("\n") ? text : text + "\n";
-    }
     StringBuilder out = new StringBuilder();
     render(function, out, "");
     return out.toString().stripTrailing() + "\n";
