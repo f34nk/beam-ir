@@ -343,24 +343,6 @@ class GoldenElixirRendererTest {
             syntaxModuleFn79()));
   }
 
-  private static Module syntaxModule(
-      String name,
-      String moduledoc,
-      List<Alias> aliases,
-      List<String> moduleAttributes,
-      List<String> trailingModuleAttributes,
-      List<Function> functions) {
-    return new Module(
-        name,
-        Moduledoc.of(moduledoc),
-        List.of(),
-        aliases,
-        moduleAttributes,
-        List.of(),
-        trailingModuleAttributes,
-        functions);
-  }
-
   private static Function syntaxModuleFn0() {
     return new Function(
         "decode",
@@ -1701,18 +1683,6 @@ class GoldenElixirRendererTest {
         null);
   }
 
-  private static DotCallExpr dot(Expression receiver, String field) {
-    return new DotCallExpr(receiver, field, List.of(), null);
-  }
-
-  private static DotCallExpr dotCall(Expression receiver, List<Expression> args) {
-    return new DotCallExpr(receiver, "()", args, null);
-  }
-
-  private static InfixExpr concat(Expression left, Expression right) {
-    return new InfixExpr(left, "<>", right, null);
-  }
-
   private static Expression withRetryCaseBody() {
     Expression backoff =
         new InfixExpr(
@@ -2087,5 +2057,35 @@ class GoldenElixirRendererTest {
                         null))),
             null),
         null);
+  }
+
+  private static Module syntaxModule(
+      String name,
+      String moduledoc,
+      List<Alias> aliases,
+      List<String> moduleAttributes,
+      List<String> trailingModuleAttributes,
+      List<Function> functions) {
+    return new Module(
+        name,
+        Moduledoc.of(moduledoc),
+        List.of(),
+        aliases,
+        moduleAttributes,
+        List.of(),
+        trailingModuleAttributes,
+        functions);
+  }
+
+  private static DotCallExpr dot(Expression receiver, String field) {
+    return new DotCallExpr(receiver, field, List.of(), null);
+  }
+
+  private static DotCallExpr dotCall(Expression receiver, List<Expression> args) {
+    return new DotCallExpr(receiver, "()", args, null);
+  }
+
+  private static InfixExpr concat(Expression left, Expression right) {
+    return new InfixExpr(left, "<>", right, null);
   }
 }
