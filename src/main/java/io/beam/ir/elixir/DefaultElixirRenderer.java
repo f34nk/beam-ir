@@ -754,6 +754,81 @@ final class DefaultElixirRenderer implements Renderer {
     return value.replace("\\", "\\\\").replace("\"", "\\\"");
   }
 
+  private void render(Function function, StringBuilder out, String indent) {
+    if (function.docOrNull() != null) {
+      out.append(indent)
+          .append("@doc \"")
+          .append(escapeString(function.docOrNull().text()))
+          .append("\"\n");
+    }
+    if (function.specOrNull() != null) {
+      renderSpec(function.specOrNull(), out, indent);
+    }
+    List<FunctionHead> heads = function.heads();
+    for (int i = 0; i < heads.size(); i++) {
+      if (i > 0) {
+        out.append('\n');
+      }
+      renderFunctionClause(function, heads.get(i), out, indent);
+    }
+  }
+
+  private void renderFunctionClause(
+      Function function, FunctionHead head, StringBuilder out, String indent) {
+    out.append(indent).append(function.private_() ? "defp " : "def ").append(function.name());
+    out.append('(');
+    renderFunctionParams(head.params(), out);
+    out.append(')');
+    if (head.guardOrNull() != null) {
+      out.append(" when ");
+      render(head.guardOrNull(), out);
+    }
+    if (function.oneLiner()) {
+      out.append(", do: ");
+      render(function.body(), out, indent);
+      return;
+    }
+    out.append(" do\n");
+    out.append(indent).append(INDENT);
+    render(function.body(), out, indent + INDENT);
+    out.append('\n').append(indent).append("end");
+  }
+
+  private void renderFunctionParams(List<Pattern> params, StringBuilder out) {
+    for (int i = 0; i < params.size(); i++) {
+      if (i > 0) {
+        out.append(", ");
+      }
+      render(params.get(i), out);
+    }
+  }
+
+  private void renderSpec(Spec spec, StringBuilder out, String indent) {
+    String text = spec.text();
+    String line = "@spec " + text;
+    if (line.length() <= PRINT_WIDTH) {
+      out.append(indent).append(line).append('\n');
+      return;
+    }
+    int split = text.lastIndexOf(" | ");
+    String separator = " | ";
+    if (split < 0) {
+      split = text.indexOf(" :: ");
+      separator = " :: ";
+    }
+    if (split < 0) {
+      out.append(indent).append(line).append('\n');
+      return;
+    }
+    out.append(indent).append("@spec ").append(text, 0, split).append('\n');
+    out.append(indent)
+        .append(INDENT)
+        .append(separator.trim())
+        .append(' ')
+        .append(text.substring(split + separator.length()))
+        .append('\n');
+  }
+
   @Override
   public String renderExpression(Expression expression) {
     StringBuilder out = new StringBuilder();
@@ -773,7 +848,13 @@ final class DefaultElixirRenderer implements Renderer {
 
   @Override
   public String renderFunction(Function function) {
-    throw new UnsupportedOperationException("Function rendering not implemented");
+    if (function.verbatimOrNull() != null) {
+      String text = function.verbatimOrNull();
+      return text.endsWith("\n") ? text : text + "\n";
+    }
+    StringBuilder out = new StringBuilder();
+    render(function, out, "");
+    return out.toString().stripTrailing() + "\n";
   }
 
   @Override

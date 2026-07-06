@@ -280,4 +280,70 @@ class ElixirRendererTest {
         renderer.renderGuardForTest(
             new ComparisonGuard(Variable.of("map"), "==", MapExpr.of(List.of()), null)));
   }
+
+  @Test
+  void rendersOneLinerFunction() {
+    assertEquals(
+        "defp decode_basic_string(\"FOO\"), do: :foo\n",
+        ElixirRenderer.renderFunction(
+            new Function(
+                "decode_basic_string",
+                true,
+                List.of(FunctionHead.of(List.of(StringPattern.of("FOO")))),
+                AtomExpr.of("foo"),
+                null,
+                null,
+                true,
+                null,
+                null)));
+  }
+
+  @Test
+  void rendersFunctionWithDocAndSpec() {
+    assertEquals(
+        """
+        @doc "Encodes events"
+        @spec encode(list()) :: binary()
+        def encode(events) when is_list(events), do: :ok
+        """,
+        ElixirRenderer.renderFunction(
+            new Function(
+                "encode",
+                false,
+                List.of(
+                    FunctionHead.of(
+                        List.of(VariablePattern.of("events")),
+                        IsTypeGuard.of("is_list", "events"))),
+                AtomExpr.of("ok"),
+                Spec.of("encode(list()) :: binary()"),
+                FunctionDoc.of("Encodes events"),
+                true,
+                null,
+                null)));
+  }
+
+  @Test
+  void rendersBlockFunction() {
+    assertEquals(
+        """
+        defp decode_basic_string(v) when is_binary(v) do
+          {:unknown, v}
+        end
+        """,
+        ElixirRenderer.renderFunction(
+            new Function(
+                "decode_basic_string",
+                true,
+                List.of(
+                    FunctionHead.of(
+                        List.of(VariablePattern.of("v")),
+                        IsTypeGuard.of("is_binary", "v"))),
+                TupleExpr.of(
+                    List.of(AtomExpr.of("unknown"), Variable.of("v"))),
+                null,
+                null,
+                false,
+                null,
+                null)));
+  }
 }
