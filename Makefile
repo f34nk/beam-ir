@@ -26,6 +26,11 @@ format/erlang:
 	cd src/test/resources/erlang && \
 	erlfmt --write *.erl
 
+.PHONY: format/elixir
+format/elixir:
+	cd src/test/resources/elixir && \
+	mix format *.ex
+
 .PHONY: clean
 clean:
 	rm -rf target/
