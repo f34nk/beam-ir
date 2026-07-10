@@ -2093,7 +2093,11 @@ class GoldenRendererTest {
                         Variable.of("H"),
                         LocalCallExpr.of("length", List.of(Variable.of("T")))))),
             FunctionClause.of(
-                List.of(OpaquePattern.of("<<_/binary>> = Bin")),
+                List.of(
+                    MatchPattern.of(
+                        BinaryPattern.of(
+                            List.of(BinarySegmentPattern.of(WildcardPattern.of(), "binary"))),
+                        VariablePattern.of("Bin"))),
                 TupleExpr.of(List.of(AtomExpr.of("binary"), Variable.of("Bin")))),
             FunctionClause.of(
                 List.of(VariablePattern.of("V")),
@@ -2357,12 +2361,17 @@ class GoldenRendererTest {
                         FunClause.of(WildcardPattern.of(), AtomExpr.of("false")))),
                 ListExpr.of(List.of(Variable.of("Result")))));
     Expression ifExpr =
-        OpaqueExpr.of(
-            """
-            if
-                length(Filtered) > 0 -> hd(Filtered);
-                true -> undefined
-            end""");
+        IfExpr.of(
+            List.of(
+                IfClause.of(
+                    ExpressionGuard.of(
+                        InfixExpr.of(
+                            LocalCallExpr.of("length", List.of(Variable.of("Filtered"))),
+                            ">",
+                            IntegerExpr.of(0))),
+                    LocalCallExpr.of("hd", List.of(Variable.of("Filtered")))),
+                IfClause.of(
+                    ExpressionGuard.of(AtomExpr.of("true")), AtomExpr.of("undefined"))));
     return Function.of(
         "helpers",
         List.of(
@@ -2528,7 +2537,10 @@ class GoldenRendererTest {
         "parse_header",
         List.of(
             FunctionClause.of(
-                List.of(OpaquePattern.of("[$[ | _] = Line")),
+                List.of(
+                    MatchPattern.of(
+                        ListPattern.cons(CharPattern.of('['), WildcardPattern.of()),
+                        VariablePattern.of("Line"))),
                 RemoteCallExpr.of("string", "trim", List.of(Variable.of("Line")))),
             FunctionClause.of(
                 List.of(VariablePattern.of("Line")),

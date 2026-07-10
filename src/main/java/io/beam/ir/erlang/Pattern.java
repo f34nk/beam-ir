@@ -12,4 +12,4 @@ public sealed interface Pattern extends Node
         VariablePattern,
         WildcardPattern,
         CatchPattern,
-        OpaquePattern {}
+        CharPattern {}

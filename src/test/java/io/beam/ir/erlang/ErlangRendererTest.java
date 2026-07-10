@@ -16,6 +16,44 @@ class ErlangRendererTest {
   }
 
   @Test
+  void rendersNotExprInComprehensionFilter() {
+    Expression filter =
+        NotExpr.of(LocalCallExpr.of("is_element_string", List.of(Variable.of("T"))));
+    assertEquals(
+        "[T || T <- Content, not is_element_string(T)]",
+        ErlangRenderer.renderExpression(
+            ListComprehensionExpr.of(
+                Variable.of("T"),
+                List.of(
+                    ListComprehensionGenerator.of(
+                        VariablePattern.of("T"), Variable.of("Content")),
+                    ListComprehensionFilter.of(filter)))));
+  }
+
+  @Test
+  void rendersFunRefExpr() {
+    assertEquals(
+        "fun should_retry/1",
+        ErlangRenderer.renderExpression(FunRefExpr.of("should_retry", 1)));
+  }
+
+  @Test
+  void rendersQuotedAtomExpr() {
+    assertEquals(
+        "'xmlns:'",
+        ErlangRenderer.renderExpression(QuotedAtomExpr.of("xmlns:")));
+  }
+
+  @Test
+  void rendersCharPatternInListCons() {
+    Pattern pattern =
+        MatchPattern.of(
+            ListPattern.cons(CharPattern.of('['), WildcardPattern.of()),
+            VariablePattern.of("Line"));
+    assertEquals("[$[ | _] = Line", ErlangRenderer.renderPattern(pattern));
+  }
+
+  @Test
   void rendersAtomPattern() {
     AtomPattern pattern = AtomPattern.of("foo");
     DefaultErlangRenderer renderer = new DefaultErlangRenderer();

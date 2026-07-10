@@ -23,4 +23,7 @@ public sealed interface Expression extends Node
         TryExpr,
         BlockExpr,
         MapEntriesExpr,
-        OpaqueExpr {}
+        NotExpr,
+        FunRefExpr,
+        QuotedAtomExpr,
+        IfExpr {}

@@ -373,11 +373,9 @@ final class DefaultErlangRenderer implements Renderer {
     if (body instanceof ListComprehensionExpr comprehension) {
       return !usesMultilineListComprehensionLayout(comprehension);
     }
-    if (body instanceof OpaqueExpr opaque) {
-      return !opaque.text().contains("\n");
-    }
     return !(body instanceof RecordExpr)
         && !(body instanceof CaseExpr)
+        && !(body instanceof IfExpr)
         && !(body instanceof Fun)
         && !(body instanceof MatchExpr)
         && !(body instanceof TryExpr);
@@ -513,6 +511,8 @@ final class DefaultErlangRenderer implements Renderer {
   private void render(Expression expression, StringBuilder out, String indent) {
     if (expression instanceof AtomExpr atom) {
       out.append(atom.value());
+    } else if (expression instanceof QuotedAtomExpr quoted) {
+      out.append('\'').append(quoted.value()).append('\'');
     } else if (expression instanceof IntegerExpr integer) {
       out.append(integer.value());
     } else if (expression instanceof Variable variable) {
@@ -527,6 +527,8 @@ final class DefaultErlangRenderer implements Renderer {
       out.append(')');
     } else if (expression instanceof CaseExpr caseExpr) {
       render(caseExpr, out, indent);
+    } else if (expression instanceof IfExpr ifExpr) {
+      render(ifExpr, out, indent);
     } else if (expression instanceof RemoteCallExpr call) {
       render(call, out, indent);
     } else if (expression instanceof LocalCallExpr call) {
@@ -545,6 +547,8 @@ final class DefaultErlangRenderer implements Renderer {
       render(list, out, indent);
     } else if (expression instanceof ListComprehensionExpr comprehension) {
       render(comprehension, out, indent);
+    } else if (expression instanceof FunRefExpr funRef) {
+      out.append("fun ").append(funRef.name()).append('/').append(funRef.arity());
     } else if (expression instanceof Fun fun) {
       render(fun, out, indent);
     } else if (expression instanceof StringExpr string) {
@@ -559,8 +563,9 @@ final class DefaultErlangRenderer implements Renderer {
       render(block, out, indent);
     } else if (expression instanceof MapEntriesExpr mapEntries) {
       render(mapEntries, out, indent);
-    } else if (expression instanceof OpaqueExpr opaque) {
-      renderOpaque(opaque, out, indent);
+    } else if (expression instanceof NotExpr notExpr) {
+      out.append("not ");
+      render(notExpr.expression(), out, indent);
     }
   }
 
@@ -595,21 +600,6 @@ final class DefaultErlangRenderer implements Renderer {
       render(entry.key(), out, indent);
       out.append(entry.updateOnly() ? " := " : " => ");
       render(entry.value(), out, indent);
-    }
-  }
-
-  private void renderOpaque(OpaqueExpr opaque, StringBuilder out, String indent) {
-    String text = opaque.text();
-    if (!text.contains("\n")) {
-      out.append(text);
-      return;
-    }
-    String[] lines = text.split("\n", -1);
-    for (int i = 0; i < lines.length; i++) {
-      if (i > 0) {
-        out.append('\n').append(indent);
-      }
-      out.append(lines[i]);
     }
   }
 
@@ -1267,8 +1257,9 @@ final class DefaultErlangRenderer implements Renderer {
   }
 
   private void renderGuardExpression(Expression expression, StringBuilder out, String indent) {
-    if (expression instanceof OpaqueExpr opaque) {
-      out.append(opaque.text());
+    if (expression instanceof NotExpr notExpr) {
+      out.append("not ");
+      renderGuardExpression(notExpr.expression(), out, indent);
       return;
     }
     if (expression instanceof InfixExpr infix) {
@@ -1427,6 +1418,29 @@ final class DefaultErlangRenderer implements Renderer {
     out.append(indent).append("end");
   }
 
+  private void render(IfExpr ifExpr, StringBuilder out, String indent) {
+    out.append("if\n");
+    List<IfClause> clauses = ifExpr.clauses();
+    for (int i = 0; i < clauses.size(); i++) {
+      IfClause clause = clauses.get(i);
+      out.append(indent).append(INDENT);
+      render(clause.guard(), out);
+      out.append(" -> ");
+      if (usesMultilineCaseBody(clause.body())) {
+        out.append('\n');
+        out.append(indent).append(INDENT).append(INDENT);
+        render(clause.body(), out, indent + INDENT + INDENT);
+      } else {
+        render(clause.body(), out, indent + INDENT);
+      }
+      if (i < clauses.size() - 1) {
+        out.append(';');
+      }
+      out.append('\n');
+    }
+    out.append(indent).append("end");
+  }
+
   private boolean useMultilineCaseScrutinee(
       Expression expression, StringBuilder out, String indent) {
     String linePrefix = currentLinePrefix(out);
@@ -1528,6 +1542,8 @@ final class DefaultErlangRenderer implements Renderer {
       if (wildcard.name() != null) {
         out.append(wildcard.name());
       }
+    } else if (pattern instanceof CharPattern charPattern) {
+      out.append('$').append(charPattern.value());
     } else if (pattern instanceof RecordPattern record) {
       render(record, out);
     } else if (pattern instanceof BinaryPattern binary) {
@@ -1546,8 +1562,6 @@ final class DefaultErlangRenderer implements Renderer {
       render(catchPattern.classPattern(), out);
       out.append(':');
       render(catchPattern.reasonPattern(), out);
-    } else if (pattern instanceof OpaquePattern opaque) {
-      out.append(opaque.text());
     }
   }
 
