@@ -137,6 +137,8 @@ final class DefaultElixirRenderer implements Renderer {
     } else if (expression instanceof NotExpr notExpr) {
       out.append("not ");
       render(notExpr.expression(), out, indent);
+    } else if (expression instanceof CondExpr cond) {
+      render(cond, out, indent);
     } else {
       throw new IllegalArgumentException("Unsupported expression: " + expression);
     }
@@ -429,6 +431,29 @@ final class DefaultElixirRenderer implements Renderer {
     out.append('\n').append(indent).append("end");
   }
 
+  private void render(CondExpr cond, StringBuilder out, String indent) {
+    out.append("cond do\n");
+    List<CondClause> clauses = cond.clauses();
+    for (int i = 0; i < clauses.size(); i++) {
+      CondClause clause = clauses.get(i);
+      out.append(indent).append(INDENT);
+      render(clause.condition(), out, indent + INDENT);
+      out.append(" -> ");
+      Expression body = clause.body();
+      if (usesMultilineCaseBody(body)) {
+        out.append('\n');
+        out.append(indent).append(INDENT).append(INDENT);
+        render(body, out, indent + INDENT + INDENT);
+      } else {
+        render(body, out, indent + INDENT);
+      }
+      if (i < clauses.size() - 1) {
+        out.append('\n');
+      }
+    }
+    out.append('\n').append(indent).append("end");
+  }
+
   private boolean clauseUsesExpandedFormat(Clause clause) {
     return patternContainsPin(clause.pattern());
   }
@@ -456,6 +481,7 @@ final class DefaultElixirRenderer implements Renderer {
 
   private boolean usesMultilineCaseBody(Expression body) {
     if (body instanceof CaseExpr
+        || body instanceof CondExpr
         || body instanceof BlockExpr
         || body instanceof MatchExpr
         || body instanceof TryExpr
@@ -528,6 +554,7 @@ final class DefaultElixirRenderer implements Renderer {
     }
     return current instanceof IfExpr
         || current instanceof CaseExpr
+        || current instanceof CondExpr
         || current instanceof TryExpr
         || current instanceof StructExpr;
   }

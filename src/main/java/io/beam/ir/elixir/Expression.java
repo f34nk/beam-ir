@@ -26,4 +26,5 @@ public sealed interface Expression
         TryExpr,
         RaiseExpr,
         BinaryExpr,
-        NotExpr {}
+        NotExpr,
+        CondExpr {}

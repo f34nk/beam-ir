@@ -303,6 +303,23 @@ class ElixirRendererTest {
   }
 
   @Test
+  void rendersCondExpr() {
+    assertEquals(
+        """
+        cond do
+          is_binary(endpoint) -> endpoint
+          true -> "default"
+        end""",
+        ElixirRenderer.renderExpression(
+            CondExpr.of(
+                List.of(
+                    CondClause.of(
+                        LocalCallExpr.of("is_binary", List.of(Variable.of("endpoint"))),
+                        Variable.of("endpoint")),
+                    CondClause.of(BooleanExpr.of(true), StringExpr.of("default"))))));
+  }
+
+  @Test
   void rendersCaseExprWithGuard() {
     assertEquals(
         """
