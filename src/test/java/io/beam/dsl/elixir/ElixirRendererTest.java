@@ -45,6 +45,43 @@ class ElixirRendererTest {
   }
 
   @Test
+  void rendersListExprWithTail() {
+    assertEquals(
+        "[1, 2] ++ tail",
+        ElixirRenderer.renderExpression(
+            ListExpr.of(
+                List.of(IntegerExpr.of(1), IntegerExpr.of(2)), Variable.of("tail"))));
+    assertEquals(
+        "[{\"Action\", action}, {\"Version\", version}] ++ flatten_query_input(input)",
+        ElixirRenderer.renderExpression(
+            ListExpr.of(
+                List.of(
+                    TupleExpr.of(
+                        List.of(StringExpr.of("Action"), Variable.of("action"))),
+                    TupleExpr.of(
+                        List.of(StringExpr.of("Version"), Variable.of("version")))),
+                LocalCallExpr.of(
+                    "flatten_query_input", List.of(Variable.of("input"))))));
+  }
+
+  @Test
+  void rendersListExprWithTailMultiline() {
+    assertEquals(
+        """
+        [
+          first_element(input),
+          second_element(input)
+        ] ++ flatten_query_input(input)""",
+        ElixirRenderer.renderExpression(
+            ListExpr.of(
+                List.of(
+                    LocalCallExpr.of("first_element", List.of(Variable.of("input"))),
+                    LocalCallExpr.of("second_element", List.of(Variable.of("input")))),
+                LocalCallExpr.of(
+                    "flatten_query_input", List.of(Variable.of("input"))))));
+  }
+
+  @Test
   void rendersMapExpr() {
     assertEquals("%{}", ElixirRenderer.renderExpression(MapExpr.of(List.of())));
     assertEquals(

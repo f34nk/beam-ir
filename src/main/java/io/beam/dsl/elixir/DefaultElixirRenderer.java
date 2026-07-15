@@ -159,6 +159,10 @@ final class DefaultElixirRenderer implements Renderer {
   }
 
   private void render(ListExpr list, StringBuilder out, String indent) {
+    if (list.tail() != null) {
+      render(new InfixExpr(ListExpr.of(list.elements()), "++", list.tail()), out, indent);
+      return;
+    }
     if (!shouldUseVerticalList(list)) {
       out.append('[');
       renderCommaSeparated(list.elements(), out, indent);
