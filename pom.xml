@@ -5,13 +5,13 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>io.beam</groupId>
-    <artifactId>beam-ir</artifactId>
+    <artifactId>beam-dsl</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <name>beam-ir</name>
-    <description>Beam IR library</description>
-    <url>https://github.com/smithy/beam-ir</url>
+    <name>beam-dsl</name>
+    <description>Beam DSL library</description>
+    <url>https://github.com/smithy/beam-dsl</url>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

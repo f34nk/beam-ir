@@ -8,7 +8,7 @@ test:
 .PHONY: build
 build:
 	mvn install
-	tree ~/.m2/repository/io/beam/beam-ir
+	tree ~/.m2/repository/io/beam/beam-dsl
 
 .PHONY: release
 release:
@@ -34,4 +34,4 @@ format/elixir:
 .PHONY: clean
 clean:
 	rm -rf target/
-	rm -rf ~/.m2/repository/io/beam/beam-ir/*
+	rm -rf ~/.m2/repository/io/beam/beam-dsl/*
